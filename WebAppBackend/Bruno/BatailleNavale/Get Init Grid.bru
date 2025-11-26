@@ -5,11 +5,12 @@ meta {
 }
 
 get {
-  url: http://localhost:5001/api/init
+  url: {{base_url}}/api/init
   body: none
   auth: inherit
 }
 
 settings {
   encodeUrl: true
+  timeout: 0
 }
