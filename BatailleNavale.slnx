@@ -1,5 +1,5 @@
 <Solution>
-  <Project Path="Backend\Backend.csproj" />
-  <Project Path="Frontend\Frontend.csproj" />
   <Project Path="Models/Models.csproj" />
+  <Project Path="WebAppBackend\WebAppBackend.csproj" />
+  <Project Path="WebAppFrontend\WebAppFrontend.csproj" />
 </Solution>
