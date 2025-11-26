@@ -4,16 +4,28 @@ using WebAppBackend.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSingleton<GridService>();
+builder.Services.AddSingleton<GameService>();
 
 var app = builder.Build();
 
-app.MapGet("/api/init", (GridService gridService) =>
+app.MapPost("/api/start", (GameService gameService) =>
 {
-    return new GameInitResponse
+    var game = gameService.StartNewGame();
+
+    return new
     {
-        PlayerGrid = gridService.GenerateGrid(),
-        AIGrid = gridService.GenerateGrid()
+        gameId = game.GameId,
+        playerGrid = game.PlayerGrid
     };
+});
+
+app.MapPost("/api/attack", (AttackRequest req, GameService gameService) =>
+{
+    var game = gameService.GetGame(req.GameId);
+    if (game == null) return Results.NotFound("Game not found");
+
+    var result = gameService.Attack(game, req.Row, req.Col);
+    return Results.Ok(result);
 });
 
 app.Run();

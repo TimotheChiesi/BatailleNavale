@@ -1,0 +1,15 @@
+meta {
+  name: Start a game
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/api/start
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+}
