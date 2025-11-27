@@ -1,5 +1,7 @@
 using Models;
 using WebAppBackend.Services;
+using FluentValidation;
+using WebAppBackend;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +18,8 @@ builder.Services.AddCors(options =>
 builder.Services.AddSingleton<GridService>();
 builder.Services.AddSingleton<GameService>();
 
+builder.Services.AddSingleton<IValidator<AttackRequest>, AttackRequestValidator>();
+
 var app = builder.Build();
 
 app.UseCors();
@@ -31,13 +35,22 @@ app.MapPost("/api/start", (GameService gameService) =>
     };
 });
 
-app.MapPost("/api/attack", (AttackRequest req, GameService gameService) =>
-{
-    var game = gameService.GetGame(req.GameId);
-    if (game == null) return Results.NotFound("Game not found");
+app.MapPost("/api/attack", 
+    (AttackRequest req, GameService gameService, IValidator<AttackRequest> validator) =>
+    {
+        var validationResult = validator.Validate(req);
+        if (!validationResult.IsValid)
+        {
+            return Results.BadRequest(validationResult.Errors);
+        }
 
-    var result = gameService.Attack(game, req.Row, req.Col);
-    return Results.Ok(result);
-});
+        var game = gameService.GetGame(req.GameId);
+        if (game == null)
+            return Results.NotFound(new { Message = "Game not found" });
+
+        var result = gameService.Attack(game, req.Row, req.Col);
+        return Results.Ok(result);
+    });
+
 
 app.Run();
