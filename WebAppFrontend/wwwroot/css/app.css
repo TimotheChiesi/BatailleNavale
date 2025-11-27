@@ -113,3 +113,94 @@ code {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+.menu {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-width: 300px;
+    margin-top: 2rem;
+}
+
+.menu-btn {
+    padding: 12px;
+    font-size: 18px;
+    background: #4e7df2;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.menu-btn:hover {
+    background: #2d62e2;
+}
+
+.menu-btn.disabled {
+    background: gray;
+    cursor: not-allowed;
+}
+
+/* Common grid styles */
+.grid {
+    border-collapse: collapse;
+    margin-bottom: 2rem;
+}
+
+.grid tr {
+}
+
+.grid td {
+    width: 35px;
+    height: 35px;
+    text-align: center;
+    vertical-align: middle;
+    font-weight: bold;
+    font-size: 18px;
+    border: 2px solid #333;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+/* Player Grid */
+.player-grid .player-cell {
+    background-color: #e0f7fa;
+}
+
+/* Player hits */
+.player-grid .hit {
+    background-color: #f44336; /* red */
+    color: white;
+}
+
+/* Player misses */
+.player-grid .miss {
+    background-color: #90a4ae; /* gray */
+    color: white;
+}
+
+/* Opponent Grid empty cell */
+.opponent-grid .cell {
+    background-color: #e0f7fa;;
+}
+
+.opponent-grid .cell:hover {
+    background-color: #cce5ff;
+}
+
+/* Opponent hits */
+.opponent-grid .hit {
+    background-color: #f44336; /* red */
+    color: white;
+}
+
+/* Opponent misses */
+.opponent-grid .miss {
+    background-color: #90a4ae; /* gray */
+    color: white;
+}
+
+/* Hover effect for opponent grid cells */
+.opponent-grid .cell:hover {
+    transform: scale(1.05);
+}

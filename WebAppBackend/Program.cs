@@ -3,19 +3,31 @@ using WebAppBackend.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.AllowAnyOrigin()
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 builder.Services.AddSingleton<GridService>();
 builder.Services.AddSingleton<GameService>();
 
 var app = builder.Build();
 
+app.UseCors();
+
 app.MapPost("/api/start", (GameService gameService) =>
 {
     var game = gameService.StartNewGame();
 
-    return new
+    return new GameInitResponse
     {
-        gameId = game.GameId,
-        playerGrid = game.PlayerGrid
+        GameId = game.GameId,
+        PlayerGrid = game.PlayerGrid
     };
 });
 
