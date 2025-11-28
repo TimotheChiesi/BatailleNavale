@@ -28,10 +28,14 @@
         <h3>Player Grid</h3>
         <div class="d-flex">
             
-            <div class="d-flex flex-column" style="width: 35px; height: 350px; justify-content: space-around; text-align: center; font-weight: bold;">
+            <div class="d-flex flex-column" 
+                 style="width: 35px; height: 350px; justify-content: space-around;
+                        text-align: center; font-weight: bold; margin-top: 35px;">
                 @for (int r = 0; r < 10; r++)
                 {
-                    <div style="height: 35px; display: flex; align-items: center; justify-content: center;">@((char)('A' + r))</div>
+                    <div style="height: 35px; display: flex; align-items: center; justify-content: center;">
+                        @((char)('A' + r))
+                    </div>
                 }
             </div>
 
@@ -40,7 +44,9 @@
                 <div class="d-flex" style="width: 350px; height: 35px; justify-content: space-around; text-align: center; font-weight: bold;">
                     @for (int c = 0; c < 10; c++)
                     {
-                        <div style="width: 35px; display: flex; align-items: center; justify-content: center;">@(c + 1)</div>
+                        <div style="width: 35px; display: flex; align-items: center; justify-content: center;">
+                            @(c + 1)
+                        </div>
                     }
                 </div>
 
@@ -96,14 +102,11 @@
                             
                             @for (int i = 0; i < ship.Size; i++)
                             {
-                                // Calculate the specific cell (r, c) for the current ship segment
                                 var r = ship.IsHorizontal ? ship.StartRow : ship.StartRow + i;
                                 var c = ship.IsHorizontal ? ship.StartCol + i : ship.StartCol;
                             
-                                // Check if the current segment of the ship has been hit ('X')
                                 if (State.PlayerGrid[r][c] == 'X') 
                                 {
-                                    // Calculate the position of the 35x35 segment *relative* to the ship-overlay div
                                     var hitStyle = ship.IsHorizontal 
                                         ? $"left: {i * CELL_STEP}px; top: 0; width: {CELL_STEP}px; height: {CELL_STEP}px;"
                                         : $"top: {i * CELL_STEP}px; left: 0; width: {CELL_STEP}px; height: {CELL_STEP}px;";
@@ -123,10 +126,14 @@
         <h3>Opponent Grid</h3>
         <div class="d-flex">
             
-            <div class="d-flex flex-column" style="width: 35px; height: 350px; justify-content: space-around; text-align: center; font-weight: bold;">
+            <div class="d-flex flex-column" 
+                 style="width: 35px; height: 350px; justify-content: space-around;
+                        text-align: center; font-weight: bold; margin-top: 35px;">
                 @for (int r = 0; r < 10; r++)
                 {
-                    <div style="height: 35px; display: flex; align-items: center; justify-content: center;">@((char)('A' + r))</div>
+                    <div style="height: 35px; display: flex; align-items: center; justify-content: center;">
+                        @((char)('A' + r))
+                    </div>
                 }
             </div>
 
@@ -135,7 +142,9 @@
                 <div class="d-flex" style="width: 350px; height: 35px; justify-content: space-around; text-align: center; font-weight: bold;">
                     @for (int c = 0; c < 10; c++)
                     {
-                        <div style="width: 35px; display: flex; align-items: center; justify-content: center;">@(c + 1)</div>
+                        <div style="width: 35px; display: flex; align-items: center; justify-content: center;">
+                            @(c + 1)
+                        </div>
                     }
                 </div>
 
