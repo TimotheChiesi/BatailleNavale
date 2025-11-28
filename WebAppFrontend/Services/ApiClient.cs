@@ -75,6 +75,8 @@ public class ApiClient
             {
                 _battleshipState.History.RemoveRange(startIndexToRemove, countToRemove);
             }
+            
+            _battleshipState.Winner = null;
         }
     }
 

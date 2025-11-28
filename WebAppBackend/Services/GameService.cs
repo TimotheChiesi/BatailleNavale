@@ -77,9 +77,6 @@ public class GameService
             }
         }
 
-        // 4. Delete the "Future" from History
-        // We want to keep everything up to 'index'. 
-        // So we remove starting from 'index + 1' to the end.
         int startIndexToRemove = index + 1;
         int countToRemove = game.History.Count - startIndexToRemove;
 
