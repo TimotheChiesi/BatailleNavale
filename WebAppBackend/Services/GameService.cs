@@ -14,15 +14,105 @@ public class GameService
 
     public GameState StartNewGame()
     {
+        var playerGrid = _gridService.GenerateGrid();
+        var aiGrid = _gridService.GenerateGrid();
+        
         var game = new GameState
         {
-            PlayerGrid = _gridService.GenerateGrid(),
-            AiGrid = _gridService.GenerateGrid(),
-            AiMoves = GenerateAiMoves()
+            PlayerGrid = playerGrid,
+            AiGrid = aiGrid,
+            OriginalPlayerGrid = DeepCopyGrid(playerGrid),
+            OriginalAiGrid = DeepCopyGrid(aiGrid),
+            
+            AiMoves = GenerateAiMoves(),
+            History = new List<MoveLog>()
         };
 
         _games[game.GameId] = game;
         return game;
+    }
+    
+    private BattleGrid DeepCopyGrid(BattleGrid source)
+    {
+        return new BattleGrid
+        {
+            // This iterates through every row and creates a distinct copy
+            Cells = source.Cells.Select(row => (char[])row.Clone()).ToArray()
+        };
+    }
+
+    public RollbackResponse RollbackGame(Guid id, int index)
+    {
+        if (!_games.TryGetValue(id, out var game))
+            throw new Exception("Game not found.");
+
+        if (index < 0 || index > game.History.Count)
+            throw new Exception("Invalid rollback index.");
+
+        game.PlayerGrid = DeepCopyGrid(game.OriginalPlayerGrid);
+        game.AiGrid = DeepCopyGrid(game.OriginalAiGrid);
+        game.Winner = null;
+
+        game.AiMoves = GenerateAiMoves();
+
+        for (int i = 0; i < index; i++)
+        {
+            var move = game.History[i];
+
+            // ---- PLAYER ATTACK ----
+            bool playerHit = move.PlayerAttackSucceeded;
+
+            game.AiGrid.Cells[move.Row][move.Col] = playerHit ? 'X' : 'O';
+
+            // ---- AI ATTACK (only if this move had one) ----
+            if (move.AiAttack != null)
+            {
+                var ai = move.AiAttack;
+
+                bool aiHit = ai.AiAttackSucceeded;
+
+                game.PlayerGrid.Cells[ai.Row][ai.Col] = aiHit ? 'X' : 'O';
+
+                game.AiMoves.Dequeue();
+            }
+        }
+
+        // 4. Delete the "Future" from History
+        // We want to keep everything up to 'index'. 
+        // So we remove starting from 'index + 1' to the end.
+        int startIndexToRemove = index + 1;
+        int countToRemove = game.History.Count - startIndexToRemove;
+
+        if (countToRemove > 0)
+        {
+            game.History.RemoveRange(startIndexToRemove, countToRemove);
+        }
+
+        return new RollbackResponse
+        {
+            PlayerGrid = game.PlayerGrid,
+            AiGrid = ConvertGridToBool(game.AiGrid.Cells)
+        };
+    }
+
+    private bool?[][] ConvertGridToBool(char[][] cells)
+    {
+        var result = new bool?[10][];
+        for (int r = 0; r < 10; r++)
+        {
+            result[r] = new bool?[10];
+            for (int c = 0; c < 10; c++)
+            {
+                char cell = cells[r][c];
+                result[r][c] = cell switch
+                {
+                    'X' => true,
+                    'O' => false,
+                    _ => null
+                };
+            }
+        }
+        return result;
     }
 
     public GameState? GetGame(Guid id)
@@ -49,6 +139,7 @@ public class GameService
         {
             return new AttackResponse
             {
+                AttackIndex = game.History.Count,
                 PlayerAttackSucceeded = false,
                 AiAttackResult = null,
                 Winner = game.Winner
@@ -60,13 +151,23 @@ public class GameService
         bool playerHit = cell is >= 'A' and <= 'F';
 
         game.AiGrid.Cells[row][col] = playerHit ? 'X' : 'O';
+        
+        var moveLog = new MoveLog
+        {
+            Row = row,
+            Col = col,
+            PlayerAttackSucceeded = playerHit
+        };
 
         // Check if player has won
         if (!GridHasShips(game.AiGrid.Cells))
         {
+            game.History.Insert(game.History.Count, moveLog);
+            
             game.Winner = "Player";
             return new AttackResponse
             {
+                AttackIndex = game.History.Count,
                 PlayerAttackSucceeded = true,
                 AiAttackResult = null,
                 Winner = "Player"
@@ -90,33 +191,41 @@ public class GameService
                 Col = aiCol
             };
 
+            moveLog.AiAttack = aiAttackResult;
+            game.History.Insert(game.History.Count, moveLog);
+
             // Check if AI has won
             if (!GridHasShips(game.PlayerGrid.Cells))
             {
                 game.Winner = "AI";
                 return new AttackResponse
                 {
+                    AttackIndex = game.History.Count,
                     PlayerAttackSucceeded = playerHit,
                     AiAttackResult = aiAttackResult,
                     Winner = "AI"
                 };
             }
-
+            
             return new AttackResponse
             {
+                AttackIndex = game.History.Count,
                 PlayerAttackSucceeded = playerHit,
                 AiAttackResult = aiAttackResult,
                 Winner = null
             };
         }
         else
+        {
+            game.History.Insert(game.History.Count, moveLog);
             return new AttackResponse
             {
+                AttackIndex = game.History.Count,
                 PlayerAttackSucceeded = playerHit,
                 AiAttackResult = null,
                 Winner = null
             };
-
+        }
     }
 
     private static bool GridHasShips(char[][] grid)

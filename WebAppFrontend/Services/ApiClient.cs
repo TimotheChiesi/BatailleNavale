@@ -20,7 +20,7 @@ public class ApiClient
         var data = await response.Content.ReadFromJsonAsync<GameInitResponse>();
 
         if (data != null)
-            _battleshipState.Initialize(data.GameId, data.PlayerGrid.Cells);
+            _battleshipState.Initialize(data.GameId, data.PlayerGrid.Cells, data.History);
     }
 
     public async Task AttackAsync(int row, int col)
@@ -38,6 +38,13 @@ public class ApiClient
         if (data != null)
         {
             _battleshipState.RegisterPlayerAttack(row, col, data.PlayerAttackSucceeded);
+            var moveLog = new MoveLog
+            {
+                Row = row,
+                Col = col,
+                PlayerAttackSucceeded = data.PlayerAttackSucceeded,
+            };
+            
             if (data.Winner != null)
             {
                 _battleshipState.Winner = data.Winner;
@@ -46,6 +53,27 @@ public class ApiClient
             {
                 var aiAttack = data.AiAttackResult; 
                 _battleshipState.RegisterAiAttack(aiAttack.Row, aiAttack.Col, aiAttack.AiAttackSucceeded);
+                moveLog.AiAttack = aiAttack;
+            }
+            
+            _battleshipState.AddTurn(moveLog);
+        }
+    }
+
+    public async Task RollbackAsync(int index)
+    {
+        var response = await _httpClient.PostAsJsonAsync("/api/rollback", new { GameId = _battleshipState.GameId, Index = index });
+        var data = await response.Content.ReadFromJsonAsync<RollbackResponse>();
+
+        if (data != null)
+        {
+            _battleshipState.UpdateAfterRollback(data.PlayerGrid, data.AiGrid);
+            int startIndexToRemove = index;
+            int countToRemove = _battleshipState.History.Count - startIndexToRemove;
+
+            if (countToRemove > 0)
+            {
+                _battleshipState.History.RemoveRange(startIndexToRemove, countToRemove);
             }
         }
     }

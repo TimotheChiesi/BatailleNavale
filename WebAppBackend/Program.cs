@@ -64,6 +64,18 @@ app.MapPost("/api/attack",
         return Results.Ok(result);
     });
 
+app.MapPost("/api/rollback", (RollbackRequest req, GameService gameService) =>
+{
+    var updatedGameState = gameService.RollbackGame(req.GameId, req.Index);
+
+    if (updatedGameState == null)
+    {
+        return Results.NotFound(new { Message = "Game not found" });
+    }
+
+    return Results.Ok(updatedGameState);
+});
+
 app.MapGrpcService<BattleshipGrpcService>()
    .EnableGrpcWeb(); 
 
