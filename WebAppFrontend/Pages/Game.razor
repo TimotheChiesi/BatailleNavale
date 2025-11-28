@@ -3,43 +3,46 @@
 @inject BattleshipState State
 @inject NavigationManager Nav
 
-<h1>Battleship</h1>
+<div class="container-fluid mt-3">
+    <h1 class="mb-4">Battleship</h1>
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1>Battleship</h1>
     <button class="btn btn-danger" @onclick="PlayAgain">Restart Game</button>
 </div>
 
-@if (State.Winner != null)
-{
-    <div class="alert alert-success text-center" role="alert">
-        <h4 class="alert-heading">Game Ended!</h4>
-        <p>
-            <strong>
-                @((State.Winner == "Player") ? "You have won the game!" : "AI has won the game!")
-            </strong>
-        </p>
-        <hr>
-        <button class="btn btn-primary" @onclick="PlayAgain">Play Again</button>
-    </div>
-}
-
-
-<h3>Player Grid</h3>
-<table class="grid player-grid">
-    @for (int r = 0; r < 10; r++)
+    @if (State.Winner != null)
     {
-        <tr>
-            @for (int c = 0; c < 10; c++)
-            {
-                var cellValue = State.PlayerGrid[r][c];
-                var cellClass = cellValue switch
+        <div class="alert alert-success text-center" role="alert">
+            <h4 class="alert-heading">Game Ended!</h4>
+            <p>
+                <strong>
+                    @((State.Winner == "Player") ? "You have won the game!" : "AI has won the game!")
+                </strong>
+            </p>
+            <hr>
+            <button class="btn btn-primary" @onclick="PlayAgain">Play Again</button>
+        </div>
+    }
+
+    @* --- CHANGE 1: Grids side by side using Bootstrap Row/Cols --- *@
+    <div class="row">
+        <div class="col-md-6">
+            <h3>Player Grid</h3>
+            <table class="grid player-grid table-bordered">
+                @for (int r = 0; r < 10; r++)
                 {
-                    'X' => "hit",
-                    'O' => "miss",
-                    _ => ""
-                };
-                <td class="cell player-cell @cellClass">
-                    @if (cellValue == 'X')
+                    <tr>
+                        @for (int c = 0; c < 10; c++)
+                        {
+                            var cellValue = State.PlayerGrid[r][c];
+                            var cellClass = cellValue switch
+                            {
+                                'X' => "hit",
+                                'O' => "miss",
+                                _ => ""
+                            };
+                            <td class="cell player-cell @cellClass">
+                                @if (cellValue == 'X')
                     {
                         <img src="hit.png" />
                     }
@@ -51,26 +54,28 @@
                     {
                         @cellValue
                     }
-                </td>
-            }
-        </tr>
-    }
-</table>
+                            </td>
+                        }
+                    </tr>
+                }
+            </table>
+        </div>
 
-<h3>Opponent Grid</h3>
-<table class="grid opponent-grid">
-    @for (int r = 0; r < 10; r++)
-    {
-        <tr>
-            @for (int c = 0; c < 10; c++)
-            {
-                var currentRow = r;
-                var currentCol = c;
-                var result = State.OpponentGrid[currentRow, currentCol];
-                string cellClass = result == null ? "cell" : result.Value ? "hit" : "miss";
+        <div class="col-md-6">
+            <h3>Opponent Grid</h3>
+            <table class="grid opponent-grid table-bordered">
+                @for (int r = 0; r < 10; r++)
+                {
+                    <tr>
+                        @for (int c = 0; c < 10; c++)
+                        {
+                            var currentRow = r;
+                            var currentCol = c;
+                            var result = State.OpponentGrid[currentRow, currentCol];
+                            string cellClass = result == null ? "cell" : result.Value ? "hit" : "miss";
 
-                <td class="@cellClass" @onclick="@(() => TryShoot(currentRow, currentCol))">
-                    @if (result.HasValue)
+                            <td class="@cellClass" @onclick="@(() => TryShoot(currentRow, currentCol))" style="cursor:pointer">
+                                @if (result.HasValue)
                     {
                         if (result.Value)
                         {
@@ -81,11 +86,83 @@
                             <img src="miss.png" />
                         }
                     }
-                </td>
-            }
-        </tr>
-    }
-</table>
+                            </td>
+                        }
+                    </tr>
+                }
+            </table>
+        </div>
+    </div>
+
+    @* Battle Log Section *@
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    Battle Log
+                </div>
+                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                    @if (State.History != null && State.History.Any())
+                    {
+                        <ul class="list-group list-group-flush">
+                            @foreach (var entry in State.History
+                               .Select((move, idx) => new { Move = move, Turn = idx + 1 })
+                               .OrderByDescending(x => x.Turn))
+                            {
+                                var turn = entry.Move;
+                                var ai = turn.AiAttack;
+
+                                <li class="list-group-item list-group-item-action" 
+                                    @onclick="() => OnRollback(entry.Turn - 1)">
+                                    
+                                    <div class="d-flex align-items-center">
+                                        @* --- CHANGE 2: Added Move Number --- *@
+                                        <span class="badge bg-dark me-3">#@entry.Turn</span>
+
+                                        <div class="flex-grow-1 d-flex justify-content-between">
+                                            <span>
+                                                <strong>You</strong> fired at
+                                                <span class="badge bg-secondary">@ToCoords(turn.Row, turn.Col)</span>
+                                                @if (turn.PlayerAttackSucceeded)
+                                                {
+                                                    <span class="badge bg-danger ms-1">HIT</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-light text-dark ms-1">MISS</span>
+                                                }
+                                            </span>
+
+                                            @if (ai != null)
+                                            {
+                                                <span class="ms-3 border-start ps-3">
+                                                    <strong>AI</strong> fired at
+                                                    <span class="badge bg-secondary">@ToCoords(ai.Row, ai.Col)</span>
+                                                    @if (ai.AiAttackSucceeded)
+                                                    {
+                                                        <span class="badge bg-danger ms-1">HIT</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-light text-dark ms-1">MISS</span>
+                                                    }
+                                                </span>
+                                            }
+                                        </div>
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    }
+                    else
+                    {
+                        <div class="text-muted text-center p-3">No moves yet. Start shooting!</div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 @code {
     async Task Shoot(int r, int c)
@@ -97,6 +174,7 @@
     async Task PlayAgain()
     {
         await Api.StartGameAsync();
+        StateHasChanged();
     }
     
     void TryShoot(int row, int col)
@@ -104,5 +182,17 @@
         if (State.Winner != null) return;
         if (State.OpponentGrid[row, col] != null) return;
         _ = Shoot(row, col);
+    }
+    
+    string ToCoords(int row, int col)
+    {
+        char rowLetter = (char)('A' + row);
+        return $"{rowLetter}{col + 1}";
+    }
+
+    async Task OnRollback(int index)
+    {
+        await Api.RollbackAsync(index);
+        StateHasChanged();
     }
 }
