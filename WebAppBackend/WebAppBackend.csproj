@@ -9,11 +9,22 @@
 
     <ItemGroup>
         <PackageReference Include="FluentValidation" Version="12.1.0" />
-        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0"/>
+        <PackageReference Include="Google.Protobuf" Version="3.33.1" />
+        <PackageReference Include="Grpc.AspNetCore" Version="2.76.0-pre1" />
+        <PackageReference Include="Grpc.AspNetCore.Web" Version="2.71.0" />
+        <PackageReference Include="Grpc.Tools" Version="2.76.0">
+          <PrivateAssets>all</PrivateAssets>
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0" />
     </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\Models\Models.csproj" />
+    </ItemGroup>
+    
+    <ItemGroup>
+        <Protobuf Include="..\Models\battleship.proto" GrpcServices="Server" />
     </ItemGroup>
 
 </Project>

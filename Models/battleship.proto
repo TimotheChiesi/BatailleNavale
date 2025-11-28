@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+option csharp_namespace = "Models";
+
+package battleship;
+
+// Service Definition
+service BattleshipService {
+  rpc Attack (AttackRequestGRPC) returns (AttackReplyGRPC);
+}
+
+// Messages
+message AttackRequestGRPC {
+  string gameId = 1;
+  int32 row = 2;
+  int32 col = 3;
+}
+
+message AiAttackResultGRPC {
+  bool ai_hit = 1;
+  int32 row = 2;
+  int32 col = 3;
+}
+
+message AttackResponseGRPC {
+  bool player_hit = 1;
+  string winner = 2;
+  AiAttackResultGRPC ai_result = 3;
+}
+
+message ValidationError {
+  repeated string errors = 1;
+}
+
+// Wrapper for oneof response
+message AttackReplyGRPC {
+  oneof result {
+    AttackResponseGRPC ok = 1;
+    ValidationError badRequest = 2;
+    string notFound = 3;
+  }
+}
