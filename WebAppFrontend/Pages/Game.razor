@@ -35,7 +35,18 @@
                     _ => ""
                 };
                 <td class="cell player-cell @cellClass">
-                    @cellValue
+                    @if (cellValue == 'X')
+                    {
+                        <img src="hit.png" />
+                    }
+                    else if (cellValue == 'O')
+                    {
+                        <img src="miss.png" />
+                    }
+                    else
+                    {
+                        @cellValue
+                    }
                 </td>
             }
         </tr>
@@ -52,11 +63,20 @@
                 var currentRow = r;
                 var currentCol = c;
                 var result = State.OpponentGrid[currentRow, currentCol];
-                string symbol = result == null ? "" : result.Value ? "X" : "O";
                 string cellClass = result == null ? "cell" : result.Value ? "hit" : "miss";
 
                 <td class="@cellClass" @onclick="@(() => TryShoot(currentRow, currentCol))">
-                    @symbol
+                    @if (result.HasValue)
+                    {
+                        if (result.Value)
+                        {
+                            <img src="hit.png" />
+                        }
+                        else
+                        {
+                            <img src="miss.png" />
+                        }
+                    }
                 </td>
             }
         </tr>

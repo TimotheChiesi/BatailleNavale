@@ -162,6 +162,12 @@ code {
     transition: background-color 0.2s, transform 0.1s;
 }
 
+.grid td img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
 /* Player Grid */
 .player-grid .player-cell {
     background-color: #e0f7fa;
