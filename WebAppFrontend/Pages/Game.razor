@@ -8,57 +8,96 @@
     <button class="btn btn-danger" @onclick="PlayAgain">Restart Game</button>
 </div>
 
-    @if (State.Winner != null)
-    {
-        <div class="alert alert-success text-center" role="alert">
-            <h4 class="alert-heading">Game Ended!</h4>
-            <p>
-                <strong>
-                    @((State.Winner == "Player") ? "You have won the game!" : "AI has won the game!")
-                </strong>
-            </p>
-            <hr>
-            <button class="btn btn-primary" @onclick="PlayAgain">Play Again</button>
-        </div>
-    }
+@if (State.Winner != null)
+{
+    <div class="alert alert-success text-center" role="alert">
+        <h4 class="alert-heading">Game Ended!</h4>
+        <p>
+            <strong>
+                @((State.Winner == "Player") ? "You have won the game!" : "AI has won the game!")
+            </strong>
+        </p>
+        <hr>
+        <button class="btn btn-primary" @onclick="PlayAgain">Play Again</button>
+    </div>
+}
 
     <div class="row">
         <div class="col-md-6">
             <h3>Player Grid</h3>
-            <table class="grid player-grid table-bordered">
-                @for (int r = 0; r < 10; r++)
+            <div class="player-grid-container"> 
+    <table class="grid player-grid table-bordered">
+        @for (int r = 0; r < 10; r++)
+        {
+            <tr>
+                @for (int c = 0; c < 10; c++)
                 {
-                    <tr>
-                        @for (int c = 0; c < 10; c++)
+                    var cellValue = State.PlayerGrid[r][c];
+                    var cellClass = cellValue switch
+                    {
+                        'X' => "hit",
+                        'O' => "miss",
+                        _ => ""
+                    };
+                    <td class="cell player-cell @cellClass">
+                        @if (cellValue == 'O')
                         {
-                            var cellValue = State.PlayerGrid[r][c];
-                            var cellClass = cellValue switch
-                            {
-                                'X' => "hit",
-                                'O' => "miss",
-                                _ => ""
-                            };
-                            <td class="cell player-cell @cellClass">
-                                @if (cellValue == 'X')
-                    {
-                        <img src="hit.png" />
-                    }
-                    else if (cellValue == 'O')
-                    {
-                        <img src="miss.png" />
-                    }
-                    else
-                    {
-                        @cellValue
-                    }
-                            </td>
+                            <img src="miss.png" />
                         }
-                    </tr>
+                    </td>
                 }
-            </table>
-        </div>
+            </tr>
+        }
+    </table></div>
 
-        <div class="col-md-6">
+    @foreach (var ship in State.PlayerShips)
+    {
+        var CELL_STEP = 35;
+
+        var top = ship.StartRow * CELL_STEP;
+        var left = ship.StartCol * CELL_STEP;
+        
+        var shipStyle = string.Empty;
+        var orientation = "horizontal";
+        
+        if (ship.IsHorizontal) 
+        {
+            var length_pixels = ship.Size * CELL_STEP; 
+            shipStyle = $"top: {top}px; left: {left}px; width: {length_pixels}px; height: {CELL_STEP}px;";
+        }
+        else 
+        {
+            var length_pixels = ship.Size * CELL_STEP; 
+            shipStyle = $"top: {top}px; left: {left}px; width: {CELL_STEP}px; height: {length_pixels}px;";
+            orientation = "vertical";
+        }
+            
+        <div class="ship-overlay" style="@shipStyle">
+            <img src="@($"Length{ship.Size}_{orientation}.png")" alt="Ship of size @ship.Size" />
+            
+            @for (int i = 0; i < ship.Size; i++)
+            {
+                // Calculate the specific cell (r, c) for the current ship segment
+                var r = ship.IsHorizontal ? ship.StartRow : ship.StartRow + i;
+                var c = ship.IsHorizontal ? ship.StartCol + i : ship.StartCol;
+            
+                // Check if the current segment of the ship has been hit ('X')
+                if (State.PlayerGrid[r][c] == 'X') 
+                {
+                    // Calculate the position of the 35x35 segment *relative* to the ship-overlay div
+                    var hitStyle = ship.IsHorizontal 
+                        ? $"left: {i * CELL_STEP}px; top: 0; width: {CELL_STEP}px; height: {CELL_STEP}px;"
+                        : $"top: {i * CELL_STEP}px; left: 0; width: {CELL_STEP}px; height: {CELL_STEP}px;";
+                    <div class="ship-segment-overlay" style="@hitStyle">
+                        <img class="hit-overlay" src="hit.png" />
+                    </div>
+                }
+            }
+        </div>
+    }
+</div>
+
+<div class="col-md-6">
             <h3>Opponent Grid</h3>
             <table class="grid opponent-grid table-bordered">
                 @for (int r = 0; r < 10; r++)

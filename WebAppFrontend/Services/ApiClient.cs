@@ -20,7 +20,7 @@ public class ApiClient
         var data = await response.Content.ReadFromJsonAsync<GameInitResponse>();
 
         if (data != null)
-            _battleshipState.Initialize(data.GameId, data.PlayerGrid.Cells, data.History);
+            _battleshipState.Initialize(data.GameId, data.PlayerGrid.Cells, data.PlayerGrid.Ships, data.History);
     }
 
     public async Task AttackAsync(int row, int col)

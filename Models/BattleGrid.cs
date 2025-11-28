@@ -7,4 +7,5 @@ public class BattleGrid
             .Select(_ => new char[10])
             .ToArray();
 
+    public List<Ship> Ships { get; set; } = new();
 }

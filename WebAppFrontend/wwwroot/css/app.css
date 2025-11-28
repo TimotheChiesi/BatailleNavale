@@ -1,3 +1,8 @@
+:root {
+    --blazor-load-percentage: 0%;
+    --blazor-load-percentage-text: "Loading...";
+}
+
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
@@ -175,7 +180,7 @@ code {
 
 /* Player hits */
 .player-grid .hit {
-    background-color: #f44336; /* red */
+    background-color: #e0f7fa;
     color: white;
 }
 
@@ -210,3 +215,38 @@ code {
 .opponent-grid .cell:hover {
     transform: scale(1.05);
 }
+
+.player-grid-container {
+    position: relative;
+    width: 350px;
+    height: 350px;
+}
+
+.ship-overlay {
+    position: absolute
+}
+
+.ship-overlay img:first-child {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    object-fit: fill;
+}
+
+.ship-segment-overlay {
+    position: absolute;
+    z-index: 20;
+}
+
+.ship-segment-overlay .hit-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.8;
+    object-fit: contain;
+}   

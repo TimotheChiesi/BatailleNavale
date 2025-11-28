@@ -19,7 +19,17 @@ public class GridService
         var grid = new BattleGrid();
 
         foreach (var ship in Ships)
-            PlaceShip(grid.Cells, ship);
+        {
+            var shipClone = new Ship 
+            { 
+                Symbol = ship.Symbol, 
+                Size = ship.Size 
+            };
+            
+            PlaceShip(grid.Cells, shipClone);
+            grid.Ships.Add(shipClone);
+        }
+            
 
         return grid;
     }
@@ -42,6 +52,10 @@ public class GridService
                 {
                     for (int i = 0; i < ship.Size; i++)
                         grid[row][col + i] = ship.Symbol;
+                    
+                    ship.StartRow = row;
+                    ship.StartCol = col;
+                    ship.IsHorizontal = true;
 
                     placed = true;
                 }
@@ -54,6 +68,10 @@ public class GridService
                 {
                     for (int i = 0; i < ship.Size; i++)
                         grid[row + i][col] = ship.Symbol;
+                    
+                    ship.StartRow = row;
+                    ship.StartCol = col;
+                    ship.IsHorizontal = false;
 
                     placed = true;
                 }

@@ -8,6 +8,8 @@ public class BattleshipState
         Enumerable.Range(0, 10).Select(_ => new char[10]).ToArray();
     
     public bool?[,] OpponentGrid { get; private set; } = new bool?[10, 10];
+    
+    public List<Ship> PlayerShips { get; private set; } = new();
 
     public Guid GameId { get; private set; }
     
@@ -15,11 +17,12 @@ public class BattleshipState
     
     public List<MoveLog> History { get; private set; } = new();
 
-    public void Initialize(Guid gameId, char[][] playerGridFromApi, List<MoveLog> existingHistory)
+    public void Initialize(Guid gameId, char[][] playerGridFromApi, List<Ship> playerShipsFromApi, List<MoveLog> existingHistory)
     {
         GameId = gameId;
         PlayerGrid = playerGridFromApi;
-        
+        PlayerShips = playerShipsFromApi;
+        Winner = null;
         History = existingHistory ?? new List<MoveLog>();
 
         // Reset opponent grid
