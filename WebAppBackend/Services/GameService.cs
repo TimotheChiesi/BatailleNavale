@@ -402,11 +402,15 @@ public class GameService
         return grid.Any(row => row.Any(IsShip));
     }
     
-    public GameState? FinalizeGameSetup(Guid id, List<Ship> playerShips, AiDifficulty difficulty)
+    public BaseGameState? FinalizeGameSetup(Guid id, List<Ship> playerShips, AiDifficulty difficulty)
     {
-        if (!_games.TryGetValue(id, out var game))
+        if (!_games.TryGetValue(id, out var baseGame))
             return null;
 
+        if (baseGame is not SinglePlayerGameState game)
+        {
+            throw new Exception("FinalizeGameSetup is not allowed in Multiplayer games.");
+        }
         // Clear the original player grid cells
         game.PlayerGrid.Cells = Enumerable.Range(0, 10).Select(_ => new char[10]).ToArray();
         game.PlayerGrid.Ships = playerShips;

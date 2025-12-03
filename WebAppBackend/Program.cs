@@ -81,11 +81,16 @@ app.MapPost("/api/finalize", (FinalizePlacementRequest req, GameService gameServ
         return Results.NotFound(new { Message = "Game not found" });
     }
     
+    if (updatedGameState is not SinglePlayerGameState game)
+    {
+        throw new Exception("FinalizeGameSetup is not allowed in Multiplayer games.");
+    }
+    
     return Results.Ok(new FinalizePlacementResponse
     {
-        GameId = updatedGameState.GameId,
-        PlayerGrid = updatedGameState.PlayerGrid,
-        History = updatedGameState.History
+        GameId = game.GameId,
+        PlayerGrid = game.PlayerGrid,
+        History = game.History
     });
 });
 
