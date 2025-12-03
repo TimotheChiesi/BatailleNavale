@@ -139,7 +139,7 @@ public class GameService
             {
                 AttackIndex = game.History.Count,
                 PlayerAttackSucceeded = false,
-                AiAttackResult = null,
+                AiAttackResults = new(),
                 Winner = game.Winner
             };
         }
@@ -167,7 +167,7 @@ public class GameService
             {
                 AttackIndex = game.History.Count,
                 PlayerAttackSucceeded = true,
-                AiAttackResult = null,
+                AiAttackResults = new(),
                 Winner = "Player"
             };
         }
@@ -175,57 +175,69 @@ public class GameService
         // AI's turn
         if (!playerHit)
         {
-            var (aiRow, aiCol) = GetNextAiMove(game);
+            var aiAttackResults = new List<AiAttackResult>();
+            bool aiHit;
 
-            char aiCell = game.PlayerGrid.Cells[aiRow][aiCol];
-            bool aiHit = IsShip(aiCell);
-
-            game.PlayerGrid.Cells[aiRow][aiCol] = aiHit ? 'X' : 'O';
-
-            AiAttackResult aiAttackResult = new AiAttackResult
+            do
             {
-                AiAttackSucceeded = aiHit,
-                Row = aiRow,
-                Col = aiCol
-            };
+                var (aiRow, aiCol) = GetNextAiMove(game);
 
-            if (game.AiDifficulty == AiDifficulty.TargetingRandom && aiHit)
-            {
-                AddNeighborsToTargetStack(game, aiRow, aiCol);
-            }
+                char aiCell = game.PlayerGrid.Cells[aiRow][aiCol];
+                aiHit = IsShip(aiCell);
 
-            moveLog.AiAttack = aiAttackResult;
+                game.PlayerGrid.Cells[aiRow][aiCol] = aiHit ? 'X' : 'O';
+
+                AiAttackResult aiAttackResult = new AiAttackResult
+                {
+                    AiAttackSucceeded = aiHit,
+                    Row = aiRow,
+                    Col = aiCol
+                };
+                aiAttackResults.Add(aiAttackResult);
+
+                if (game.AiDifficulty == AiDifficulty.TargetingRandom && aiHit)
+                {
+                    AddNeighborsToTargetStack(game, aiRow, aiCol);
+                }
+
+                // Check if AI has won after each shot
+                if (!GridHasShips(game.PlayerGrid.Cells))
+                {
+                    game.Winner = "AI";
+                    // The last AI attack is the one that matters for the history log
+                    moveLog.AiAttack = aiAttackResult;
+                    game.History.Insert(game.History.Count, moveLog);
+                    return new AttackResponse
+                    {
+                        AttackIndex = game.History.Count,
+                        PlayerAttackSucceeded = playerHit,
+                        AiAttackResults = aiAttackResults,
+                        Winner = "AI"
+                    };
+                }
+            } while (aiHit); // AI plays again if it hit
+
+            // The last AI attack is the one that matters for the history log
+            moveLog.AiAttack = aiAttackResults.LastOrDefault();
             game.History.Insert(game.History.Count, moveLog);
 
-            // Check if AI has won
-            if (!GridHasShips(game.PlayerGrid.Cells))
-            {
-                game.Winner = "AI";
-                return new AttackResponse
-                {
-                    AttackIndex = game.History.Count,
-                    PlayerAttackSucceeded = playerHit,
-                    AiAttackResult = aiAttackResult,
-                    Winner = "AI"
-                };
-            }
-            
             return new AttackResponse
             {
                 AttackIndex = game.History.Count,
                 PlayerAttackSucceeded = playerHit,
-                AiAttackResult = aiAttackResult,
+                AiAttackResults = aiAttackResults,
                 Winner = null
             };
         }
         else
         {
+            // Player hit, so it's their turn again. AI does not play.
             game.History.Insert(game.History.Count, moveLog);
             return new AttackResponse
             {
                 AttackIndex = game.History.Count,
                 PlayerAttackSucceeded = playerHit,
-                AiAttackResult = null,
+                AiAttackResults = new(),
                 Winner = null
             };
         }

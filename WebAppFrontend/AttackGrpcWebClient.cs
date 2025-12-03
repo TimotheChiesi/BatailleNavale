@@ -70,18 +70,21 @@ public class AttackGrpcWebClient
     private AttackResponse MapToDomain(AttackResponseGRPC grpcResponse)
     {
         // Map Proto Response -> Domain Response
-        return new AttackResponse
+        var aiAttacks = new List<AiAttackResult>();
+        if (grpcResponse.AiResult != null)
         {
-            PlayerAttackSucceeded = grpcResponse.PlayerHit,
-            Winner = string.IsNullOrEmpty(grpcResponse.Winner) ? null : grpcResponse.Winner,
-            
-            // Map the nested AI result if it exists
-            AiAttackResult = grpcResponse.AiResult == null ? null : new AiAttackResult
+            aiAttacks.Add(new AiAttackResult
             {
                 AiAttackSucceeded = grpcResponse.AiResult.AiHit,
                 Row = grpcResponse.AiResult.Row,
                 Col = grpcResponse.AiResult.Col
-            }
+            });
+        }
+        return new AttackResponse
+        {
+            PlayerAttackSucceeded = grpcResponse.PlayerHit,
+            Winner = string.IsNullOrEmpty(grpcResponse.Winner) ? null : grpcResponse.Winner,
+            AiAttackResults = aiAttacks
         };
     }
 }

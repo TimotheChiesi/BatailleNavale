@@ -49,11 +49,14 @@ public class ApiClient
             {
                 _battleshipState.Winner = data.Winner;
             }
-            if (data.AiAttackResult != null)
+            if (data.AiAttackResults.Any())
             {
-                var aiAttack = data.AiAttackResult; 
-                _battleshipState.RegisterAiAttack(aiAttack.Row, aiAttack.Col, aiAttack.AiAttackSucceeded);
-                moveLog.AiAttack = aiAttack;
+                foreach (var aiAttack in data.AiAttackResults)
+                {
+                    _battleshipState.RegisterAiAttack(aiAttack.Row, aiAttack.Col, aiAttack.AiAttackSucceeded);
+                }
+                // Log the last AI attack for history purposes
+                moveLog.AiAttack = data.AiAttackResults.Last();
             }
             
             _battleshipState.AddTurn(moveLog);

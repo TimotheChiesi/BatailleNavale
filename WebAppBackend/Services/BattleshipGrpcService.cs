@@ -30,13 +30,14 @@ public class BattleshipGrpcService : BattleshipService.BattleshipServiceBase
 
         AiAttackResultGRPC? aiGrpcResult = null;
     
-        if (result.AiAttackResult != null)
+        var lastAiAttack = result.AiAttackResults.LastOrDefault();
+        if (lastAiAttack != null)
         {
             aiGrpcResult = new AiAttackResultGRPC
             {
-                AiHit = result.AiAttackResult.AiAttackSucceeded,
-                Row = result.AiAttackResult.Row,
-                Col = result.AiAttackResult.Col
+                AiHit = lastAiAttack.AiAttackSucceeded,
+                Row = lastAiAttack.Row,
+                Col = lastAiAttack.Col
             };
         }
 
