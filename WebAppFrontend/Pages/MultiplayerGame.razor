@@ -1,0 +1,294 @@
+@page "/multiplayerGame/{RoomId}/{PlayerId}"
+@using Microsoft.AspNetCore.SignalR.Client
+@inject ApiClient ApiClient
+@inject BattleshipState State
+
+<h1>Multiplayer Battleship</h1>
+
+@if (_isLoading)
+{
+    <p>Loading game board...</p>
+}
+else if (_loadError)
+{
+    <p style="color:red">@_errorMessage</p>
+}
+else
+{
+    @* Winner Panel *@
+    @if (State.Winner != null)
+    {
+        @if (State.Winner == PlayerId)
+        {
+            <div class="alert alert-success text-center" role="alert">
+                <h4 class="alert-heading">Game Ended!</h4>
+                <p><strong>You won the game!</strong></p>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-danger text-center" role="alert">
+                <h4 class="alert-heading">Game Ended!</h4>
+                <p><strong>You lose the game!</strong></p>
+            </div>
+        }
+        
+    }
+
+    <h4>Turn: @State.CurrentPlayerTurn</h4>
+    <div class="row justify-content-center">
+
+        @* PLAYER GRID *@
+        <div class="col-6">
+            <h3>Your Grid</h3>
+            <div class="player-grid-container"> 
+                <table class="grid player-grid">
+                    @for (int r = 0; r < 10; r++)
+                    {
+                        <tr>
+                            @for (int c = 0; c < 10; c++)
+                            {
+                                var cellValue = State.PlayerGrid[r][c];
+                                var cellClass = cellValue switch
+                                {
+                                    'X' => "hit",
+                                    'O' => "miss",
+                                    _ => ""
+                                };
+                                <td class="cell player-cell @cellClass">
+                                    @if (cellValue == 'O')
+                                    {
+                                        <img src="miss.png" alt=""/>
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    }
+                </table>
+
+                @foreach (var ship in State.PlayerShips)
+                {
+                    var cellStep = 35;
+
+                    var top = ship.StartRow * cellStep;
+                    var left = ship.StartCol * cellStep;
+                
+                    var shipStyle = string.Empty;
+                    var orientation = "horizontal";
+                
+                    if (ship.IsHorizontal) 
+                    {
+                        var lengthPixels = ship.Size * cellStep; 
+                        shipStyle = $"top: {top}px; left: {left}px; width: {lengthPixels}px; height: {cellStep}px;";
+                    }
+                    else 
+                    {
+                        var lengthPixels = ship.Size * cellStep; 
+                        shipStyle = $"top: {top}px; left: {left}px; width: {cellStep}px; height: {lengthPixels}px;";
+                        orientation = "vertical";
+                    }
+                    
+                    <div class="ship-overlay" style="@shipStyle">
+                        <img src="@($"Length{ship.Size}_{orientation}.png")" alt="Ship of size @ship.Size" />
+                    
+                        @for (int i = 0; i < ship.Size; i++)
+                        {
+                            // Calculate the specific cell (r, c) for the current ship segment
+                            var r = ship.IsHorizontal ? ship.StartRow : ship.StartRow + i;
+                            var c = ship.IsHorizontal ? ship.StartCol + i : ship.StartCol;
+                    
+                            // Check if the current segment of the ship has been hit ('X')
+                            if (State.PlayerGrid[r][c] == 'X') 
+                            {
+                                // Calculate the position of the 35x35 segment *relative* to the ship-overlay div
+                                var hitStyle = ship.IsHorizontal 
+                                    ? $"left: {i * cellStep}px; top: 0; width: {cellStep}px; height: {cellStep}px;"
+                                    : $"top: {i * cellStep}px; left: 0; width: {cellStep}px; height: {cellStep}px;";
+                                <div class="ship-segment-overlay" style="@hitStyle">
+                                    <img class="hit-overlay" src="hit.png" alt=""/>
+                                </div>
+                            }
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+        
+        @* OPPONENT GRID *@
+        <div class="col-6">
+            <h3>Opponent Grid</h3>
+
+            <table class="grid opponent-grid">
+                @for (int r = 0; r < 10; r++)
+                {
+                    <tr>
+                        @for (int c = 0; c < 10; c++)
+                        {
+                            int row = r;
+                            int col = c;
+                            var result = State.OpponentGrid[row, col];
+                            string cellClass = !result.HasValue ? "cell"
+                                : result.Value ? "hit"
+                                : "miss";
+
+                            <td class="@cellClass" @onclick="@(() => TryShoot(row, col))">
+                                @if (result.HasValue)
+                                {
+                                    <img src="@(result.Value ? "hit.png" : "miss.png")" alt=""/>
+                                }
+                            </td>
+                        }
+                    </tr>
+                }
+            </table>
+        </div>
+
+    </div>
+
+    @* BATTLE LOG *@
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">Battle Log</div>
+                <div class="card-body" style="max-height:400px; overflow-y:auto;">
+                    @if (State.History.Any())
+                    {
+                        <ul class="list-group list-group-flush">
+                            @foreach (var move in ((IEnumerable<MoveLog>)State.History).Reverse())
+                            {
+                                <li class="list-group-item">
+                                    @if (move is MultiplayerMoveLog mpMove && !string.IsNullOrEmpty(mpMove.AttackerId))
+                                    {
+                                        @if (mpMove.AttackerId == "You")
+                                        {
+                                            <strong class="text-primary">You</strong> 
+                                            <span>fired at </span>
+                                            <span class="badge bg-secondary">@ToCoords(mpMove.Row, mpMove.Col)</span>
+                                            
+                                            @if (mpMove.PlayerAttackSucceeded) 
+                                            { <span class="badge bg-danger">HIT</span> }
+                                            else 
+                                            { <span class="badge bg-light text-dark">MISS</span> }
+                                        }
+                                        else
+                                        {
+                                            <strong class="text-danger">Opponent</strong> 
+                                            <span>fired at </span>
+                                            <span class="badge bg-secondary">@ToCoords(mpMove.Row, mpMove.Col)</span>
+                                            
+                                            @if (mpMove.PlayerAttackSucceeded) 
+                                            { <span class="badge bg-danger">HIT</span> }
+                                            else 
+                                            { <span class="badge bg-light text-dark">MISS</span> }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        @* Fallback for base MoveLog objects or missing IDs *@
+                                        <span class="text-muted">Unknown shot at </span>
+                                        <span class="badge bg-secondary">@ToCoords(move.Row, move.Col)</span>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string RoomId { get; set; } = null!;
+    [Parameter] public string PlayerId { get; set; } = null!;
+
+    private HubConnection? _hubConnection;
+    private bool _isLoading = true;
+    private bool _loadError;
+    private string _errorMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Load your grid & ship placements from API
+            await ApiClient.GetMultiplayerGameAsync(RoomId, PlayerId);
+        }
+        catch (Exception ex)
+        {
+            _loadError = true;
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+
+        // --- SIGNALR SETUP ---
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl("http://localhost:5120/battleHub")
+            .WithAutomaticReconnect()
+            .Build();
+
+        _hubConnection.On<int, int, bool, MultiplayerMoveLog>("ReceiveAttack", (row, col, hit, moveLog) =>
+        {
+            InvokeAsync(() =>
+            {
+                State.RegisterOpponentAttack(row, col, hit);
+                moveLog.AttackerId = "Opponent";
+                State.AddTurnMultiplayer(moveLog);
+
+                if (!hit)
+                {
+                    State.CurrentPlayerTurn = "Your turn";
+                }
+                
+                StateHasChanged();
+            });
+        });
+        
+        _hubConnection.On<int, int, bool, string?, MultiplayerMoveLog?>("AttackResult", (row, col, hit, winner, moveLog) =>
+        {
+            InvokeAsync(() =>
+            {
+                if (moveLog != null)
+                {
+                    State.RegisterPlayerAttack(row, col, hit);
+                    moveLog.AttackerId = "You";
+                    State.AddTurnMultiplayer(moveLog);
+                    if (winner != null)
+                        State.Winner = winner;
+
+                    if (!hit)
+                    {
+                        State.CurrentPlayerTurn = "Opponent's turn";
+                    }
+                }
+                StateHasChanged();
+            });
+        });
+
+        _hubConnection.On<string>("GameEnded", (winnerId) =>
+        {
+            State.Winner = winnerId;
+            StateHasChanged();
+        });
+
+        await _hubConnection.StartAsync();
+
+        var playerRejoin = new Player { PlayerId = PlayerId, Pseudo = "Rejoining..." };
+        await _hubConnection.InvokeAsync("JoinRoom", RoomId, playerRejoin);
+    }
+
+    void TryShoot(int row, int col)
+    {
+        if (State.Winner != null) return;
+        if (State.OpponentGrid[row, col] != null) return;
+        _ = _hubConnection?.InvokeAsync("PlayerAttack", RoomId, PlayerId, row, col);
+    }
+
+    string ToCoords(int row, int col)
+    {
+        return $"{(char)('A' + row)}{col + 1}";
+    }
+}

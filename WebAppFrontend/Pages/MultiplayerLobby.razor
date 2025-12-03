@@ -1,0 +1,72 @@
+@page "/multiplayer"
+@using Microsoft.AspNetCore.SignalR.Client
+@inject NavigationManager Navigation
+
+<h3>Multiplayer Battleship</h3>
+
+<input placeholder="Room ID" @bind="RoomId" />
+<input placeholder="Pseudo" @bind="CurrentPlayer.Pseudo" />
+
+<button @onclick="JoinGame">Join Game</button>
+
+<p>@Status</p>
+<p>@Player1Info</p>
+<p>@Player2Info</p>
+
+@code {
+    private HubConnection? hubConnection;
+    public string RoomId { get; set; } = "";
+    public string Status { get; set; } = "Not connected";
+    public string Player1Info { get; set; } = "";
+    public string Player2Info { get; set; } = "";
+    
+    private Player CurrentPlayer = new();
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        GenerateNewRoomId();
+        
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl("http://localhost:5120/battleHub")
+            .WithAutomaticReconnect()
+            .Build();
+
+        hubConnection.On<string, int, string>("JoinedRoom", (room, playerNumber, pseudo) =>
+        {
+            Status = $"Joined {room} as Player {playerNumber} ({pseudo})";
+            StateHasChanged();
+        });
+
+        hubConnection.On<string, string, string>("GameReady", (room, player1Name, player2Name) =>
+        {
+            Status = $"Game ready in room {room}!";
+            Player1Info = $"Player 1: {player1Name}";
+            Player2Info = $"Player 2: {player2Name}";
+            StateHasChanged();
+        });
+        
+        hubConnection.On<string>("StartGame", (room) =>
+        {
+            Navigation.NavigateTo($"/multiplayerGame/{room}/{CurrentPlayer.PlayerId}");
+        });
+
+        await hubConnection.StartAsync();
+    }
+
+    private async Task JoinGame()
+    {
+        if (hubConnection != null)
+        {
+            CurrentPlayer.PlayerId = Guid.NewGuid().ToString();
+            
+            await hubConnection.InvokeAsync("JoinRoom", RoomId, CurrentPlayer);
+        }
+    }
+    
+    private void GenerateNewRoomId()
+    {
+        RoomId = Guid.NewGuid().ToString();
+    }
+}
+

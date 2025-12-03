@@ -5,19 +5,19 @@ namespace WebAppBackend.Services;
 public class GameService
 {
     private readonly GridService _gridService;
-    private readonly Dictionary<Guid, GameState> _games = new();
+    private readonly Dictionary<Guid, BaseGameState> _games = new();
 
     public GameService(GridService gridService)
     {
         _gridService = gridService;
     }
 
-    public GameState StartNewGame(AiDifficulty difficulty)
+    public SinglePlayerGameState StartNewSinglePlayerGame(AiDifficulty difficulty)
     {
         var playerGrid = _gridService.GenerateGrid();
         var aiGrid = _gridService.GenerateGrid();
         
-        var game = new GameState
+        var game = new SinglePlayerGameState
         {
             PlayerGrid = playerGrid,
             AiGrid = aiGrid,
@@ -32,6 +32,37 @@ public class GameService
         return game;
     }
     
+    public void StartNewMultiplayerGame(string roomIdString, string player1Id, string player2Id)
+    {
+        // 1. Convert the Room String to a GUID
+        if (!Guid.TryParse(roomIdString, out Guid gameId))
+        {
+            throw new ArgumentException("Invalid Room ID format");
+        }
+
+        var game = new MultiplayerGameState
+        {
+            GameId = gameId, // The Room GUID becomes the Game GUID
+            Player1Id = player1Id,
+            Player1Grid = _gridService.GenerateGrid(),
+            Player2Id = player2Id,
+            Player2Grid = _gridService.GenerateGrid(),
+            History = new List<MultiplayerMoveLog>()
+        };
+
+        _games[gameId] = game;
+    }
+
+    public MultiplayerGameState? GetMultiplayerGame(string idString)
+    {
+        if (Guid.TryParse(idString, out Guid id))
+        {
+            _games.TryGetValue(id, out var game);
+            return game as MultiplayerGameState;
+        }
+        return null;
+    }
+    
     private BattleGrid DeepCopyGrid(BattleGrid source)
     {
         return new BattleGrid
@@ -43,8 +74,13 @@ public class GameService
 
     public RollbackResponse RollbackGame(Guid id, int index)
     {
-        if (!_games.TryGetValue(id, out var game))
+        if (!_games.TryGetValue(id, out var baseGame))
             throw new Exception("Game not found.");
+        
+        if (baseGame is not SinglePlayerGameState game)
+        {
+            throw new Exception("Rollback is not allowed in Multiplayer games.");
+        }
 
         if (index < 0 || index > game.History.Count)
             throw new Exception("Invalid rollback index.");
@@ -113,10 +149,13 @@ public class GameService
         return result;
     }
 
-    public GameState? GetGame(Guid id)
+    public SinglePlayerGameState? GetGame(Guid id)
     {
-        _games.TryGetValue(id, out var game);
-        return game;
+        if (_games.TryGetValue(id, out var baseGame))
+        {
+            return baseGame as SinglePlayerGameState;
+        }
+        return null;
     }
 
     private Queue<(int Row, int Col)> GenerateAiMoves()
@@ -130,25 +169,25 @@ public class GameService
         return new Queue<(int, int)>(moves.OrderBy(_ => Random.Shared.Next()));
     }
     
-    public AttackResponse Attack(GameState game, int row, int col)
+    public AttackResponse Attack(SinglePlayerGameState singlePlayerGame, int row, int col)
     {
         // If game is already over, simply return winner info
-        if (game.Winner != null)
+        if (singlePlayerGame.Winner != null)
         {
             return new AttackResponse
             {
-                AttackIndex = game.History.Count,
+                AttackIndex = singlePlayerGame.History.Count,
                 PlayerAttackSucceeded = false,
                 AiAttackResults = new(),
-                Winner = game.Winner
+                Winner = singlePlayerGame.Winner
             };
         }
         
         // Player's turn
-        char cell = game.AiGrid.Cells[row][col];
+        char cell = singlePlayerGame.AiGrid.Cells[row][col];
         bool playerHit = cell is >= 'A' and <= 'F';
 
-        game.AiGrid.Cells[row][col] = playerHit ? 'X' : 'O';
+        singlePlayerGame.AiGrid.Cells[row][col] = playerHit ? 'X' : 'O';
         
         var moveLog = new MoveLog
         {
@@ -158,14 +197,14 @@ public class GameService
         };
 
         // Check if player has won
-        if (!GridHasShips(game.AiGrid.Cells))
+        if (!GridHasShips(singlePlayerGame.AiGrid.Cells))
         {
-            game.History.Insert(game.History.Count, moveLog);
+            singlePlayerGame.History.Insert(singlePlayerGame.History.Count, moveLog);
             
-            game.Winner = "Player";
+            singlePlayerGame.Winner = "Player";
             return new AttackResponse
             {
-                AttackIndex = game.History.Count,
+                AttackIndex = singlePlayerGame.History.Count,
                 PlayerAttackSucceeded = true,
                 AiAttackResults = new(),
                 Winner = "Player"
@@ -182,10 +221,10 @@ public class GameService
             {
                 var (aiRow, aiCol) = GetNextAiMove(game);
 
-                char aiCell = game.PlayerGrid.Cells[aiRow][aiCol];
+                char aiCell = singlePlayerGame.PlayerGrid.Cells[aiRow][aiCol];
                 aiHit = IsShip(aiCell);
 
-                game.PlayerGrid.Cells[aiRow][aiCol] = aiHit ? 'X' : 'O';
+                singlePlayerGame.PlayerGrid.Cells[aiRow][aiCol] = aiHit ? 'X' : 'O';
 
                 AiAttackResult aiAttackResult = new AiAttackResult
                 {
@@ -201,15 +240,15 @@ public class GameService
                 }
 
                 // Check if AI has won after each shot
-                if (!GridHasShips(game.PlayerGrid.Cells))
+                if (!GridHasShips(singlePlayerGame.PlayerGrid.Cells))
                 {
-                    game.Winner = "AI";
+                    singlePlayerGame.Winner = "AI";
                     // The last AI attack is the one that matters for the history log
                     moveLog.AiAttacks = aiAttackResults;
                     game.History.Insert(game.History.Count, moveLog);
                     return new AttackResponse
                     {
-                        AttackIndex = game.History.Count,
+                        AttackIndex = singlePlayerGame.History.Count,
                         PlayerAttackSucceeded = playerHit,
                         AiAttackResults = aiAttackResults,
                         Winner = "AI"
@@ -220,10 +259,9 @@ public class GameService
             // The last AI attack is the one that matters for the history log
             moveLog.AiAttacks = aiAttackResults;
             game.History.Insert(game.History.Count, moveLog);
-
             return new AttackResponse
             {
-                AttackIndex = game.History.Count,
+                AttackIndex = singlePlayerGame.History.Count,
                 PlayerAttackSucceeded = playerHit,
                 AiAttackResults = aiAttackResults,
                 Winner = null
@@ -232,16 +270,81 @@ public class GameService
         else
         {
             // Player hit, so it's their turn again. AI does not play.
-            game.History.Insert(game.History.Count, moveLog);
+            singlePlayerGame.History.Insert(game.History.Count, moveLog);
             return new AttackResponse
             {
-                AttackIndex = game.History.Count,
+                AttackIndex = singlePlayerGame.History.Count,
                 PlayerAttackSucceeded = playerHit,
                 AiAttackResults = new(),
                 Winner = null
             };
         }
     }
+    
+    public MultiplayerAttackResponse? AttackMultiplayer(MultiplayerGameState multiplayerGameState, string playerId, int row, int col)
+    {
+        // If game is already over, simply return winner info
+        if (multiplayerGameState.Winner != null)
+        {
+            return new MultiplayerAttackResponse
+            {
+                AttackIndex = multiplayerGameState.History.Count,
+                PlayerAttackSucceeded = false,
+                Winner = multiplayerGameState.Winner == PlayerRole.Player1 ? multiplayerGameState.Player1Id : multiplayerGameState.Player2Id
+            };
+        }
+        
+        if (multiplayerGameState.CurrentTurnPlayerId == playerId)
+        {
+            char cell = multiplayerGameState.OpponentGrid.Cells[row][col];
+            bool playerHit = cell is >= 'A' and <= 'F';
+            
+            multiplayerGameState.OpponentGrid.Cells[row][col] = playerHit ? 'X' : 'O';
+            
+            var moveLog = new MultiplayerMoveLog()
+            {
+                AttackerId = playerId,
+                Row = row,
+                Col = col,
+                PlayerAttackSucceeded = playerHit
+            };
+            
+            // Check if player has won
+            if (!GridHasShips(multiplayerGameState.OpponentGrid.Cells))
+            {
+                multiplayerGameState.History.Insert(multiplayerGameState.History.Count, moveLog);
+            
+                multiplayerGameState.Winner = multiplayerGameState.CurrentPlayerTurn;
+                
+                return new MultiplayerAttackResponse
+                {
+                    AttackIndex = multiplayerGameState.History.Count,
+                    PlayerAttackSucceeded = true,
+                    Winner = multiplayerGameState.Winner == PlayerRole.Player1 ? multiplayerGameState.Player1Id : multiplayerGameState.Player2Id,
+                    MultiplayerMoveLog = moveLog
+                };
+            }
+
+            if (!playerHit)
+            {
+                multiplayerGameState.NextTurn();
+            }
+            
+            multiplayerGameState.History.Insert(multiplayerGameState.History.Count, moveLog);
+            return new MultiplayerAttackResponse
+            {
+                AttackIndex = multiplayerGameState.History.Count,
+                PlayerAttackSucceeded = playerHit,
+                Winner = null,
+                MultiplayerMoveLog = moveLog
+            };
+        }
+        else
+        {
+            return null;
+        }
+    }
+
     
     private (int Row, int Col) GetNextAiMove(GameState game)
     {

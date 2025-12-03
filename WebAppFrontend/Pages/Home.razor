@@ -9,8 +9,8 @@
         Local Game (vs AI)
     </button>
 
-    <button class="menu-btn disabled" disabled>
-        Multiplayer (coming soon)
+    <button class="menu-btn" @onclick="StartMultiplayerGame">
+        Multiplayer
     </button>
 </div>
 
@@ -18,5 +18,10 @@
     async Task StartLocalGame()
     {
         Nav.NavigateTo("/placement");
+    }
+
+    void StartMultiplayerGame()
+    {
+        Nav.NavigateTo("/multiplayer");
     }
 }
