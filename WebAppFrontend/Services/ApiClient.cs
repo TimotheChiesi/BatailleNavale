@@ -43,6 +43,7 @@ public class ApiClient
                 Row = row,
                 Col = col,
                 PlayerAttackSucceeded = data.PlayerAttackSucceeded,
+                AiAttacks = data.AiAttackResults
             };
             
             if (data.Winner != null)
@@ -55,8 +56,6 @@ public class ApiClient
                 {
                     _battleshipState.RegisterAiAttack(aiAttack.Row, aiAttack.Col, aiAttack.AiAttackSucceeded);
                 }
-                // Log the last AI attack for history purposes
-                moveLog.AiAttack = data.AiAttackResults.Last();
             }
             
             _battleshipState.AddTurn(moveLog);

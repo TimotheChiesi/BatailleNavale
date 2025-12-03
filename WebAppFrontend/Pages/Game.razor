@@ -197,7 +197,7 @@
                            .OrderByDescending(x => x.Turn))
                         {
                             var turn = entry.Move;
-                            var ai = turn.AiAttack;
+                            var aiAttacks = turn.AiAttacks;
 
                             <li class="list-group-item list-group-item-action" 
                                 @onclick="() => OnRollback(entry.Turn - 1)">
@@ -219,18 +219,23 @@
                                             }
                                         </span>
 
-                                        @if (ai != null)
+                                        @if (aiAttacks.Any())
                                         {
                                             <span class="ms-3 border-start ps-3">
-                                                <strong>AI</strong> fired at
-                                                <span class="badge bg-secondary">@ToCoords(ai.Row, ai.Col)</span>
-                                                @if (ai.AiAttackSucceeded)
+                                                <strong>AI</strong> fired at:
+                                                @foreach (var aiAttack in aiAttacks)
                                                 {
-                                                    <span class="badge bg-danger ms-1">HIT</span>
-                                                }
-                                                else
-                                                {
-                                                    <span class="badge bg-light text-dark ms-1">MISS</span>
+                                                    <span class="d-inline-block ms-2">
+                                                        <span class="badge bg-secondary">@ToCoords(aiAttack.Row, aiAttack.Col)</span>
+                                                        @if (aiAttack.AiAttackSucceeded)
+                                                        {
+                                                            <span class="badge bg-danger ms-1">HIT</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-light text-dark ms-1">MISS</span>
+                                                        }
+                                                    </span>
                                                 }
                                             </span>
                                         }

@@ -66,13 +66,13 @@ public class GameService
             game.AiGrid.Cells[move.Row][move.Col] = playerHit ? 'X' : 'O';
 
             // ---- AI ATTACK (only if this move had one) ----
-            if (move.AiAttack != null)
+            if (move.AiAttacks.Any())
             {
-                var ai = move.AiAttack;
-
-                bool aiHit = ai.AiAttackSucceeded;
-
-                game.PlayerGrid.Cells[ai.Row][ai.Col] = aiHit ? 'X' : 'O';
+                foreach (var aiAttack in move.AiAttacks)
+                {
+                    bool aiHit = aiAttack.AiAttackSucceeded;
+                    game.PlayerGrid.Cells[aiAttack.Row][aiAttack.Col] = aiHit ? 'X' : 'O';
+                }
 
                 game.AiMoves.Dequeue();
             }
@@ -205,7 +205,7 @@ public class GameService
                 {
                     game.Winner = "AI";
                     // The last AI attack is the one that matters for the history log
-                    moveLog.AiAttack = aiAttackResult;
+                    moveLog.AiAttacks = aiAttackResults;
                     game.History.Insert(game.History.Count, moveLog);
                     return new AttackResponse
                     {
@@ -218,7 +218,7 @@ public class GameService
             } while (aiHit); // AI plays again if it hit
 
             // The last AI attack is the one that matters for the history log
-            moveLog.AiAttack = aiAttackResults.LastOrDefault();
+            moveLog.AiAttacks = aiAttackResults;
             game.History.Insert(game.History.Count, moveLog);
 
             return new AttackResponse
