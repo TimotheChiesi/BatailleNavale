@@ -15,8 +15,6 @@ public class SinglePlayerGameState : BaseGameState
     public Stack<(int Row, int Col)> AiTargetStack { get; set; } = new();
     public AiDifficulty AiDifficulty { get; set; } = AiDifficulty.Random;
     
-    public string? Winner { get; set; }
-    
     
     public List<MoveLog> History { get; set; } = new();
 }

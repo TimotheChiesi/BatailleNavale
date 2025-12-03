@@ -1,7 +1,6 @@
 using Models;
 using WebAppBackend.Services;
 using FluentValidation;
-using Microsoft.AspNetCore.Mvc;
 using WebAppBackend;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -38,7 +37,7 @@ app.MapHub<BattleHub>("/battleHub");
 
 app.MapPost("/api/start", (GameService gameService, [FromBody] StartGameRequest request) =>
 {
-    var game = gameService.StartNewSinglePlayerGame(request.Difficulty);
+    var game = gameService.StartNewGame();
     return new GameInitResponse
     {
         GameId = game.GameId,
@@ -88,6 +87,40 @@ app.MapPost("/api/finalize", (FinalizePlacementRequest req, GameService gameServ
         PlayerGrid = updatedGameState.PlayerGrid,
         History = updatedGameState.History
     });
+});
+
+app.MapPost("/api/multiplayer/start", (GameService gameService, MultiplayerStartRequest request) =>
+{
+    // A. FETCH ONLY (Do not StartNewGame here)
+    // The game was already created by the SignalR Hub when the 2nd player joined.
+    var baseGame = gameService.GetMultiplayerGame(request.RoomId);
+
+    if (baseGame is not MultiplayerGameState game) 
+    {
+        return Results.NotFound("Game not found. Did the lobby start it correctly?");
+    }
+
+    // B. Security Check & Response
+    if (request.PlayerId == game.Player1Id)
+    {
+        return Results.Ok(new GameInitResponse 
+        { 
+            GameId = game.GameId,
+            PlayerGrid = game.Player1Grid, // Return P1's secrets
+            StartingPlayer = "You"
+        });
+    }
+    else if (request.PlayerId == game.Player2Id)
+    {
+        return Results.Ok(new GameInitResponse 
+        { 
+            GameId = game.GameId,
+            PlayerGrid = game.Player2Grid, // Return P2's secrets
+            StartingPlayer = "Opponent"
+        });
+    }
+
+    return Results.BadRequest("Player ID not found in this match.");
 });
 
 app.MapPost("/api/multiplayer/start", (GameService gameService, MultiplayerStartRequest request) =>
