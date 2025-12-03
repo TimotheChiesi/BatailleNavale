@@ -1,17 +1,46 @@
 @page "/multiplayer"
 @using Microsoft.AspNetCore.SignalR.Client
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 
-<h3>Multiplayer Battleship</h3>
+<div class="d-flex justify-content-center mt-5">
+    <div class="card shadow-lg p-4" style="width: 28rem; border-radius: 1rem;">
+        <h3 class="text-center mb-4">Multiplayer Battleship</h3>
 
-<input placeholder="Room ID" @bind="RoomId" />
-<input placeholder="Pseudo" @bind="CurrentPlayer.Pseudo" />
+        <div class="mb-3">
+            <label class="form-label fw-bold">Room ID</label>
+            <div class="input-group">
+                <input class="form-control" @bind="RoomId"/>
+                <button class="btn btn-outline-secondary" @onclick="CopyRoomId">
+                    📋
+                </button>
+            </div>
+            <small class="text-muted">Share this with the second player</small>
+        </div>
 
-<button @onclick="JoinGame">Join Game</button>
+        <div class="mb-3">
+            <label class="form-label fw-bold">Pseudo</label>
+            <input class="form-control" placeholder="Your nickname" @bind="CurrentPlayer.Pseudo" />
+        </div>
 
-<p>@Status</p>
-<p>@Player1Info</p>
-<p>@Player2Info</p>
+        <button class="btn btn-primary w-100 mb-3" @onclick="JoinGame">
+            🔗 Join Game
+        </button>
+
+        <div class="alert alert-info py-2" role="alert">
+            <strong>Status:</strong> @Status
+        </div>
+
+        @if (!string.IsNullOrEmpty(Player1Info) || !string.IsNullOrEmpty(Player2Info))
+        {
+            <div class="mt-3">
+                <h5 class="fw-bold">Players</h5>
+                <p>@Player1Info</p>
+                <p>@Player2Info</p>
+            </div>
+        }
+    </div>
+</div>
 
 @code {
     private HubConnection? hubConnection;
@@ -19,14 +48,13 @@
     public string Status { get; set; } = "Not connected";
     public string Player1Info { get; set; } = "";
     public string Player2Info { get; set; } = "";
-    
-    private Player CurrentPlayer = new();
 
+    private Player CurrentPlayer = new();
 
     protected override async Task OnInitializedAsync()
     {
         GenerateNewRoomId();
-        
+
         hubConnection = new HubConnectionBuilder()
             .WithUrl("http://localhost:5120/battleHub")
             .WithAutomaticReconnect()
@@ -45,7 +73,7 @@
             Player2Info = $"Player 2: {player2Name}";
             StateHasChanged();
         });
-        
+
         hubConnection.On<string>("StartGame", (room) =>
         {
             Navigation.NavigateTo($"/multiplayerGame/{room}/{CurrentPlayer.PlayerId}");
@@ -59,14 +87,18 @@
         if (hubConnection != null)
         {
             CurrentPlayer.PlayerId = Guid.NewGuid().ToString();
-            
             await hubConnection.InvokeAsync("JoinRoom", RoomId, CurrentPlayer);
         }
     }
-    
+
     private void GenerateNewRoomId()
     {
         RoomId = Guid.NewGuid().ToString();
     }
+    
+    private async Task CopyRoomId()
+    {
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", RoomId);
+        Status = "Room ID copied!";
+    }
 }
-
