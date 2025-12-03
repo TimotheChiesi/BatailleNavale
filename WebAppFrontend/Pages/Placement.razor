@@ -3,8 +3,8 @@
 @inject BattleshipState State
 @inject NavigationManager Nav
 
-<h3>Place Your Ships</h3>
-<p>Click on a ship to rotate it, or click and drag to move it. Then click 'Start Game'.</p>
+<h2>Place Your Ships</h2>
+<p>Click on a ship to rotate it, or drag to move it. Then click 'Start Game'.</p>
 
 @if (State.PlacementGrid.Ships == null || !State.PlacementGrid.Ships.Any())
 {
@@ -18,72 +18,116 @@ else
                 pointer-events: @(isDragging ? "auto" : "none"); z-index: 100;">
     </div>
     
-    <div class="player-grid-container"> 
-        <div class="d-flex">
-
-            <div class="d-flex flex-column" 
-                 style="width: 35px; height: 350px; justify-content: space-around;
-                        text-align: center; font-weight: bold; margin-top: 35px;">
-                @for (int r = 0; r < 10; r++)
-                {
-                    <div style="height: 35px; display: flex; align-items: center; justify-content: center;">
-                        @((char)('A' + r))
-                    </div>
-                }
-            </div>
-
-            <div class="d-flex flex-column">
-                
-                <div class="d-flex" style="width: 350px; height: 35px; justify-content: space-around; text-align: center; font-weight: bold;">
-                    @for (int c = 0; c < 10; c++)
+    <div class="row justify-content-center"> 
+        
+        <div class="col-6">
+            <h3 class="text-start">Player Grid</h3> <div class="d-flex">
+                <div class="d-flex flex-column"
+                     style="width: 35px; height: 350px; justify-content: space-around;
+                            text-align: center; font-weight: bold; margin-top: 35px;">
+                    @for (int r = 0; r < 10; r++)
                     {
-                        <div style="width: 35px; display: flex; align-items: center; justify-content: center;">
-                            @(c + 1)
+                        <div style="height: 35px; display: flex; align-items: center; justify-content: center;">
+                            @((char)('A' + r))
                         </div>
                     }
                 </div>
 
-                <div class="player-grid-container"> 
-                    <table class="grid player-grid">
+                <div class="d-flex flex-column">
+                    <div class="d-flex" style="width: 350px;
+                        height: 35px; justify-content: space-around; text-align: center; font-weight: bold;">
+                        @for (int c = 0; c < 10; c++)
+                        {
+                            <div style="width: 35px;
+                                display: flex; align-items: center; justify-content: center;">
+                                @(c + 1)
+                            </div>
+                        }
+                    </div>
+
+                    <div class="player-grid-container">
+                        <table class="grid player-grid">
+                            @for (int r = 0; r < 10; r++)
+                            {
+                                <tr>
+                                    @for (int c = 0; c < 10; c++)
+                                    {
+                                        <td class="cell player-cell"></td>
+                                    }
+                                </tr>
+                            }
+                        </table>
+
+                        @foreach (var ship in State.PlacementGrid.Ships)
+                        {
+                            var CELL_STEP = 35;
+                            var top = ship.StartRow * CELL_STEP;
+                            var left = ship.StartCol * CELL_STEP;
+                            var shipStyle = string.Empty;
+                            var orientation = ship.IsHorizontal ? "horizontal" : "vertical";
+                            var length_pixels = ship.Size * CELL_STEP;
+
+                            if (ship.IsHorizontal)
+                            {
+                                shipStyle = $"top: {top}px; left: {left}px; width: {length_pixels}px; height: {CELL_STEP}px;";
+                            }
+                            else
+                            {
+                                shipStyle = $"top: {top}px; left: {left}px; width: {CELL_STEP}px; height: {length_pixels}px;";
+                            }
+
+                            <div class="ship-overlay"
+                                 @key="ship.Symbol"
+                                 style="@shipStyle"
+                                 @onmousedown="e => StartDrag(e, ship)">
+                                <img src="@($"Length{ship.Size}_{orientation}.png")" alt="Ship of size @ship.Size"/>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-6">
+            <h3 class="text-start">Opponent Grid</h3> <div class="d-flex">
+                <div class="d-flex flex-column" 
+                     style="width: 35px; height: 350px; justify-content: space-around;
+                            text-align: center; font-weight: bold; margin-top: 35px;">
+                    @for (int r = 0; r < 10; r++)
+                    {
+                        <div style="height: 35px; display: flex; align-items: center; justify-content: center;">
+                            @((char)('A' + r))
+                        </div>
+                    }
+                </div>
+
+                <div class="d-flex flex-column">
+                    <div class="d-flex" style="width: 350px;
+                        height: 35px; justify-content: space-around; text-align: center; font-weight: bold;">
+                        @for (int c = 0; c < 10; c++)
+                        {
+                            <div style="width: 35px;
+                                display: flex; align-items: center; justify-content: center;">
+                                @(c + 1)
+                            </div>
+                        }
+                    </div>
+
+                    <table class="grid darkened-opponent-grid">
                         @for (int r = 0; r < 10; r++)
                         {
                             <tr>
                                 @for (int c = 0; c < 10; c++)
                                 {
-                                    <td class="cell player-cell"></td>
+                                    <td class="cell"></td>
                                 }
                             </tr>
                         }
                     </table>
-
-                    @foreach (var ship in State.PlacementGrid.Ships)
-                    {
-                        var CELL_STEP = 35;
-                        var top = ship.StartRow * CELL_STEP;
-                        var left = ship.StartCol * CELL_STEP;
-                        var shipStyle = string.Empty;
-                        var orientation = ship.IsHorizontal ? "horizontal" : "vertical";
-                        var length_pixels = ship.Size * CELL_STEP; 
-
-                        if (ship.IsHorizontal) 
-                        {
-                            shipStyle = $"top: {top}px; left: {left}px; width: {length_pixels}px; height: {CELL_STEP}px;";
-                        }
-                        else 
-                        {
-                            shipStyle = $"top: {top}px; left: {left}px; width: {CELL_STEP}px; height: {length_pixels}px;";
-                        }
-                            
-                        <div class="ship-overlay" 
-                             @key="ship.Symbol"
-                             style="@shipStyle"
-                             @onmousedown="e => StartDrag(e, ship)">
-                            <img src="@($"Length{ship.Size}_{orientation}.png")" alt="Ship of size @ship.Size" />
-                        </div>
-                    }
                 </div>
             </div>
         </div>
+        
     </div>
 
     <button class="menu-btn mt-4" @onclick="FinalizePlacement">
