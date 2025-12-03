@@ -76,6 +76,23 @@ app.MapPost("/api/rollback", (RollbackRequest req, GameService gameService) =>
     return Results.Ok(updatedGameState);
 });
 
+app.MapPost("/api/finalize", (FinalizePlacementRequest req, GameService gameService) =>
+{
+    var updatedGameState = gameService.FinalizeGameSetup(req.GameId, req.Ships);
+
+    if (updatedGameState == null)
+    {
+        return Results.NotFound(new { Message = "Game not found" });
+    }
+    
+    return Results.Ok(new FinalizePlacementResponse
+    {
+        GameId = updatedGameState.GameId,
+        PlayerGrid = updatedGameState.PlayerGrid,
+        History = updatedGameState.History
+    });
+});
+
 app.MapGrpcService<BattleshipGrpcService>()
    .EnableGrpcWeb(); 
 

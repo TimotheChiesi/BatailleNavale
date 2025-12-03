@@ -234,4 +234,34 @@ public class GameService
 
         return false;
     }
+    
+    public GameState? FinalizeGameSetup(Guid id, List<Ship> playerShips)
+    {
+        if (!_games.TryGetValue(id, out var game))
+            return null;
+
+        // Clear the original player grid cells
+        game.PlayerGrid.Cells = Enumerable.Range(0, 10).Select(_ => new char[10]).ToArray();
+        game.PlayerGrid.Ships = playerShips;
+        
+        // Re-populate the cells based on the user-placed ships
+        foreach (var ship in playerShips)
+        {
+            if (ship.IsHorizontal)
+            {
+                for (int i = 0; i < ship.Size; i++)
+                    game.PlayerGrid.Cells[ship.StartRow][ship.StartCol + i] = ship.Symbol;
+            }
+            else
+            {
+                for (int i = 0; i < ship.Size; i++)
+                    game.PlayerGrid.Cells[ship.StartRow + i][ship.StartCol] = ship.Symbol;
+            }
+        }
+        
+        // Update the original grid copy for rollback purposes
+        game.OriginalPlayerGrid = DeepCopyGrid(game.PlayerGrid);
+        
+        return game;
+    }
 }
