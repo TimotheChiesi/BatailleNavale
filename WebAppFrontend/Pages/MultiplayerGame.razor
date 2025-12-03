@@ -58,7 +58,7 @@ else
                                 <td class="cell player-cell @cellClass">
                                     @if (cellValue == 'O')
                                     {
-                                        <img src="miss.png" alt=""/>
+                                        <img src="./images/miss.png" alt=""/>
                                     }
                                 </td>
                             }
@@ -89,7 +89,7 @@ else
                     }
                     
                     <div class="ship-overlay" style="@shipStyle">
-                        <img src="@($"Length{ship.Size}_{orientation}.png")" alt="Ship of size @ship.Size" />
+                        <img src="@($"./images/Length{ship.Size}_{orientation}.png")" alt="Ship of size @ship.Size" />
                     
                         @for (int i = 0; i < ship.Size; i++)
                         {
@@ -105,7 +105,7 @@ else
                                     ? $"left: {i * cellStep}px; top: 0; width: {cellStep}px; height: {cellStep}px;"
                                     : $"top: {i * cellStep}px; left: 0; width: {cellStep}px; height: {cellStep}px;";
                                 <div class="ship-segment-overlay" style="@hitStyle">
-                                    <img class="hit-overlay" src="hit.png" alt=""/>
+                                    <img class="hit-overlay" src="./images/hit.png" alt=""/>
                                 </div>
                             }
                         }
@@ -134,7 +134,7 @@ else
                             <td class="@cellClass" @onclick="@(() => TryShoot(row, col))">
                                 @if (result.HasValue)
                                 {
-                                    <img src="@(result.Value ? "hit.png" : "miss.png")" alt=""/>
+                                    <img src="@(result.Value ? "./images/hit.png" : "./images/miss.png")" alt=""/>
                                 }
                             </td>
                         }
