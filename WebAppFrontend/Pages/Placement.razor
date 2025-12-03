@@ -129,6 +129,15 @@ else
         </div>
         
     </div>
+    
+    <div class="mt-4 mb-4 d-flex align-items-center justify-content-center">
+        <label for="aiDifficulty" class="me-3">Select AI Difficulty:</label>
+        <select id="aiDifficulty" class="form-select w-auto" @bind="selectedDifficulty">
+            
+            <option value="@AiDifficulty.Random">Random (Easy)</option>
+            <option value="@AiDifficulty.TargetingRandom">Targetting Random (Perimeter Hunting)</option>
+        </select>
+    </div>
 
     <button class="menu-btn mt-4" @onclick="FinalizePlacement">
         Start Game
@@ -149,6 +158,8 @@ else
     // Temporary variables to store position before validation
     private int tempStartRow;
     private int tempStartCol;
+    
+    private AiDifficulty selectedDifficulty = AiDifficulty.Random;
     
     protected override async Task OnInitializedAsync()
     {
@@ -304,7 +315,7 @@ else
             }
         }
 
-        await Api.FinalizePlacementAsync(State.PlacementGrid.Ships);
+        await Api.FinalizePlacementAsync(State.PlacementGrid.Ships, selectedDifficulty);
         Nav.NavigateTo("/game");
     }
 }

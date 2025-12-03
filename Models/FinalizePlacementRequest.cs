@@ -7,6 +7,7 @@ public class FinalizePlacementRequest
 {
     public Guid GameId { get; set; }
     public List<Ship> Ships { get; set; } = new List<Ship>();
+    public AiDifficulty Difficulty { get; set; }
 }
 public class FinalizePlacementResponse
 {

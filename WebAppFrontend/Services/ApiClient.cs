@@ -91,12 +91,13 @@ public class ApiClient
         }
     }
     
-    public async Task FinalizePlacementAsync(List<Models.Ship> ships)
+    public async Task FinalizePlacementAsync(List<Models.Ship> ships, AiDifficulty difficulty)
     {
         var request = new FinalizePlacementRequest
         {
             GameId = _battleshipState.GameId,
-            Ships = ships
+            Ships = ships,
+            Difficulty = difficulty
         };
 
         var response = await _httpClient.PostAsJsonAsync("/api/finalize", request);

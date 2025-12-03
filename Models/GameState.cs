@@ -13,6 +13,9 @@ public class GameState
     public BattleGrid OriginalAiGrid { get; set; }
     
     public Queue<(int Row, int Col)> AiMoves { get; set; } = new();
+    public Stack<(int Row, int Col)> AiTargetStack { get; set; } = new();
+    public AiDifficulty AiDifficulty { get; set; } = AiDifficulty.Random;
+    
     public string? Winner { get; set; }
     
     public List<MoveLog> History { get; set; } = new();

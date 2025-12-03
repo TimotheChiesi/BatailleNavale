@@ -67,7 +67,7 @@
                                     <td class="cell player-cell @cellClass">
                                         @if (cellValue == 'O')
                                         {
-                                            <img src="miss.png" />
+                                            <img src="./images/miss.png" />
                                         }
                                     </td>
                                 }
@@ -111,7 +111,7 @@
                                         ? $"left: {i * CELL_STEP}px; top: 0; width: {CELL_STEP}px; height: {CELL_STEP}px;"
                                         : $"top: {i * CELL_STEP}px; left: 0; width: {CELL_STEP}px; height: {CELL_STEP}px;";
                                     <div class="ship-segment-overlay" style="@hitStyle">
-                                        <img class="hit-overlay" src="hit.png" />
+                                        <img class="hit-overlay" src="./images/hit.png" />
                                     </div>
                                 }
                             }
@@ -164,11 +164,11 @@
                                     {
                                         if (result.Value)
                                         {
-                                            <img src="hit.png"/>
+                                            <img src="./images/hit.png"/>
                                         }
                                         else
                                         {
-                                            <img src="miss.png"/>
+                                            <img src="./images/miss.png"/>
                                         }
                                     }
                                 </td>
@@ -258,8 +258,7 @@
 
     async Task PlayAgain()
     {
-        await Api.StartGameAsync();
-        StateHasChanged();
+        Nav.NavigateTo("/placement");
     }
     
     void TryShoot(int row, int col)

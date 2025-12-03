@@ -1,6 +1,7 @@
 using Models;
 using WebAppBackend.Services;
 using FluentValidation;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using WebAppBackend;
 
@@ -39,9 +40,9 @@ app.UseRouting();
 app.UseGrpcWeb();
 app.UseCors();
 
-app.MapPost("/api/start", (GameService gameService) =>
+app.MapPost("/api/start", (GameService gameService, [FromBody] StartGameRequest request) =>
 {
-    var game = gameService.StartNewGame();
+    var game = gameService.StartNewGame(request.Difficulty);
     return new GameInitResponse
     {
         GameId = game.GameId,
@@ -78,7 +79,7 @@ app.MapPost("/api/rollback", (RollbackRequest req, GameService gameService) =>
 
 app.MapPost("/api/finalize", (FinalizePlacementRequest req, GameService gameService) =>
 {
-    var updatedGameState = gameService.FinalizeGameSetup(req.GameId, req.Ships);
+    var updatedGameState = gameService.FinalizeGameSetup(req.GameId, req.Ships, req.Difficulty);
 
     if (updatedGameState == null)
     {

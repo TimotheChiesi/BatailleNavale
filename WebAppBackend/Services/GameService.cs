@@ -12,7 +12,7 @@ public class GameService
         _gridService = gridService;
     }
 
-    public GameState StartNewGame()
+    public GameState StartNewGame(AiDifficulty difficulty)
     {
         var playerGrid = _gridService.GenerateGrid();
         var aiGrid = _gridService.GenerateGrid();
@@ -52,6 +52,7 @@ public class GameService
         game.PlayerGrid = DeepCopyGrid(game.OriginalPlayerGrid);
         game.AiGrid = DeepCopyGrid(game.OriginalAiGrid);
         game.Winner = null;
+        game.AiTargetStack.Clear();
 
         game.AiMoves = GenerateAiMoves();
 
@@ -174,10 +175,10 @@ public class GameService
         // AI's turn
         if (!playerHit)
         {
-            var (aiRow, aiCol) = game.AiMoves.Dequeue();
+            var (aiRow, aiCol) = GetNextAiMove(game);
 
             char aiCell = game.PlayerGrid.Cells[aiRow][aiCol];
-            bool aiHit = aiCell is >= 'A' and <= 'F';
+            bool aiHit = IsShip(aiCell);
 
             game.PlayerGrid.Cells[aiRow][aiCol] = aiHit ? 'X' : 'O';
 
@@ -187,6 +188,11 @@ public class GameService
                 Row = aiRow,
                 Col = aiCol
             };
+
+            if (game.AiDifficulty == AiDifficulty.TargetingRandom && aiHit)
+            {
+                AddNeighborsToTargetStack(game, aiRow, aiCol);
+            }
 
             moveLog.AiAttack = aiAttackResult;
             game.History.Insert(game.History.Count, moveLog);
@@ -224,18 +230,64 @@ public class GameService
             };
         }
     }
+    
+    private (int Row, int Col) GetNextAiMove(GameState game)
+    {
+        if (game.AiDifficulty == AiDifficulty.TargetingRandom)
+        {
+            // Targeting Mode: Use the stack of potential targets
+            while (game.AiTargetStack.TryPop(out var target))
+            {
+                // Check if this cell has already been attacked
+                if (game.PlayerGrid.Cells[target.Row][target.Col] is 'X' or 'O')
+                {
+                    continue; // Already tried, pop next target
+                }
+                return target; // Found a valid, untried target
+            }
+        }
+        
+        // Hunting Mode (or if TargetStack is empty): Get a random move
+        (int Row, int Col) move;
+        do
+        {
+            move = game.AiMoves.Dequeue();
+        } 
+        // Ensure we don't attack a cell we've already hit (can happen during rollback/replay)
+        while (game.PlayerGrid.Cells[move.Row][move.Col] is 'X' or 'O');
+
+        return move;
+    }
+
+    private void AddNeighborsToTargetStack(GameState game, int row, int col)
+    {
+        // Potential neighbors (Up, Down, Left, Right)
+        var neighbors = new[]
+        {
+            (row - 1, col),
+            (row + 1, col),
+            (row, col - 1),
+            (row, col + 1)
+        };
+
+        foreach (var (r, c) in neighbors)
+        {
+            // Check bounds and if it's already been attacked
+            if (r >= 0 && r < 10 && c >= 0 && c < 10 && game.PlayerGrid.Cells[r][c] is not 'X' and not 'O')
+            {
+                game.AiTargetStack.Push((r, c));
+            }
+        }
+    }
+
+    private static bool IsShip(char cell) => cell is >= 'A' and <= 'F';
 
     private static bool GridHasShips(char[][] grid)
     {
-        foreach (var row in grid)
-            foreach (var cell in row)
-                if (cell is >= 'A' and <= 'F')
-                    return true;
-
-        return false;
+        return grid.Any(row => row.Any(IsShip));
     }
     
-    public GameState? FinalizeGameSetup(Guid id, List<Ship> playerShips)
+    public GameState? FinalizeGameSetup(Guid id, List<Ship> playerShips, AiDifficulty difficulty)
     {
         if (!_games.TryGetValue(id, out var game))
             return null;
@@ -243,6 +295,7 @@ public class GameService
         // Clear the original player grid cells
         game.PlayerGrid.Cells = Enumerable.Range(0, 10).Select(_ => new char[10]).ToArray();
         game.PlayerGrid.Ships = playerShips;
+        game.AiDifficulty = difficulty;
         
         // Re-populate the cells based on the user-placed ships
         foreach (var ship in playerShips)
