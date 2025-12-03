@@ -75,6 +75,36 @@ public class ApiClient
             {
                 _battleshipState.History.RemoveRange(startIndexToRemove, countToRemove);
             }
+            
+            _battleshipState.Winner = null;
+        }
+    }
+    
+    public async Task StartPlacementAsync()
+    {
+        var response = await _httpClient.PostAsJsonAsync("/api/start", new { });
+        var data = await response.Content.ReadFromJsonAsync<GameInitResponse>();
+
+        if (data != null)
+        {
+            _battleshipState.InitializePlacement(data.GameId, data.PlayerGrid);
+        }
+    }
+    
+    public async Task FinalizePlacementAsync(List<Models.Ship> ships)
+    {
+        var request = new FinalizePlacementRequest
+        {
+            GameId = _battleshipState.GameId,
+            Ships = ships
+        };
+
+        var response = await _httpClient.PostAsJsonAsync("/api/finalize", request);
+        var data = await response.Content.ReadFromJsonAsync<FinalizePlacementResponse>();
+
+        if (data != null)
+        {
+            _battleshipState.Initialize(data.GameId, data.PlayerGrid.Cells, data.PlayerGrid.Ships, data.History);
         }
     }
 

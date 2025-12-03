@@ -1,0 +1,310 @@
+@page "/placement"
+@inject ApiClient Api
+@inject BattleshipState State
+@inject NavigationManager Nav
+
+<h2>Place Your Ships</h2>
+<p>Click on a ship to rotate it, or drag to move it. Then click 'Start Game'.</p>
+
+@if (State.PlacementGrid.Ships == null || !State.PlacementGrid.Ships.Any())
+{
+    <p>Loading ships...</p>
+}
+else
+{
+    <div @onmousemove="e => Drag(e)" 
+         @onmouseup="e => EndDrag()" 
+         style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
+                pointer-events: @(isDragging ? "auto" : "none"); z-index: 100;">
+    </div>
+    
+    <div class="row justify-content-center"> 
+        
+        <div class="col-6">
+            <h3 class="text-start">Player Grid</h3> <div class="d-flex">
+                <div class="d-flex flex-column"
+                     style="width: 35px; height: 350px; justify-content: space-around;
+                            text-align: center; font-weight: bold; margin-top: 35px;">
+                    @for (int r = 0; r < 10; r++)
+                    {
+                        <div style="height: 35px; display: flex; align-items: center; justify-content: center;">
+                            @((char)('A' + r))
+                        </div>
+                    }
+                </div>
+
+                <div class="d-flex flex-column">
+                    <div class="d-flex" style="width: 350px;
+                        height: 35px; justify-content: space-around; text-align: center; font-weight: bold;">
+                        @for (int c = 0; c < 10; c++)
+                        {
+                            <div style="width: 35px;
+                                display: flex; align-items: center; justify-content: center;">
+                                @(c + 1)
+                            </div>
+                        }
+                    </div>
+
+                    <div class="player-grid-container">
+                        <table class="grid player-grid">
+                            @for (int r = 0; r < 10; r++)
+                            {
+                                <tr>
+                                    @for (int c = 0; c < 10; c++)
+                                    {
+                                        <td class="cell player-cell"></td>
+                                    }
+                                </tr>
+                            }
+                        </table>
+
+                        @foreach (var ship in State.PlacementGrid.Ships)
+                        {
+                            var CELL_STEP = 35;
+                            var top = ship.StartRow * CELL_STEP;
+                            var left = ship.StartCol * CELL_STEP;
+                            var shipStyle = string.Empty;
+                            var orientation = ship.IsHorizontal ? "horizontal" : "vertical";
+                            var length_pixels = ship.Size * CELL_STEP;
+
+                            if (ship.IsHorizontal)
+                            {
+                                shipStyle = $"top: {top}px; left: {left}px; width: {length_pixels}px; height: {CELL_STEP}px;";
+                            }
+                            else
+                            {
+                                shipStyle = $"top: {top}px; left: {left}px; width: {CELL_STEP}px; height: {length_pixels}px;";
+                            }
+
+                            <div class="ship-overlay"
+                                 @key="ship.Symbol"
+                                 style="@shipStyle"
+                                 @onmousedown="e => StartDrag(e, ship)">
+                                <img src="@($"Length{ship.Size}_{orientation}.png")" alt="Ship of size @ship.Size"/>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-6">
+            <h3 class="text-start">Opponent Grid</h3> <div class="d-flex">
+                <div class="d-flex flex-column" 
+                     style="width: 35px; height: 350px; justify-content: space-around;
+                            text-align: center; font-weight: bold; margin-top: 35px;">
+                    @for (int r = 0; r < 10; r++)
+                    {
+                        <div style="height: 35px; display: flex; align-items: center; justify-content: center;">
+                            @((char)('A' + r))
+                        </div>
+                    }
+                </div>
+
+                <div class="d-flex flex-column">
+                    <div class="d-flex" style="width: 350px;
+                        height: 35px; justify-content: space-around; text-align: center; font-weight: bold;">
+                        @for (int c = 0; c < 10; c++)
+                        {
+                            <div style="width: 35px;
+                                display: flex; align-items: center; justify-content: center;">
+                                @(c + 1)
+                            </div>
+                        }
+                    </div>
+
+                    <table class="grid darkened-opponent-grid">
+                        @for (int r = 0; r < 10; r++)
+                        {
+                            <tr>
+                                @for (int c = 0; c < 10; c++)
+                                {
+                                    <td class="cell"></td>
+                                }
+                            </tr>
+                        }
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+
+    <button class="menu-btn mt-4" @onclick="FinalizePlacement">
+        Start Game
+    </button>
+}
+
+@code {
+    private const int CELL_STEP = 35;
+    private const int GRID_SIZE = 10;
+    
+    // Dragging state
+    private Models.Ship? activeShip = null;
+    private bool isDragging = false;
+    private double offsetX;
+    private double offsetY;
+    private bool hasMoved = false;
+    
+    // Temporary variables to store position before validation
+    private int tempStartRow;
+    private int tempStartCol;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await Api.StartPlacementAsync();
+    }
+    
+    void StartDrag(MouseEventArgs e, Models.Ship ship)
+    {
+        if (e.Button != 0) return;
+
+        isDragging = true;
+        activeShip = ship;
+        hasMoved = false;
+
+        // Store current position for rollback if placement fails
+        tempStartRow = ship.StartRow;
+        tempStartCol = ship.StartCol;
+
+        // Calculate offset relative to the ship's current absolute position
+        var absoluteLeft = ship.StartCol * CELL_STEP + CELL_STEP;
+        var absoluteTop = ship.StartRow * CELL_STEP + CELL_STEP;
+
+        offsetX = e.ClientX - absoluteLeft;
+        offsetY = e.ClientY - absoluteTop;
+    }
+
+    void Drag(MouseEventArgs e)
+    {
+        if (!isDragging || activeShip == null) return;
+        
+        hasMoved = true;
+        
+        // Calculate the proposed new CSS top/left based on mouse position and original offset
+        var newLeft = e.ClientX - offsetX;
+        var newTop = e.ClientY - offsetY;
+        
+        // Convert CSS position back to 0-indexed grid coordinates
+        var proposedCol = (int)Math.Round((newLeft - CELL_STEP) / CELL_STEP);
+        var proposedRow = (int)Math.Round((newTop - CELL_STEP) / CELL_STEP);
+
+        // Update the ship's coordinates live for visual feedback
+        activeShip.StartCol = proposedCol;
+        activeShip.StartRow = proposedRow;
+        StateHasChanged();
+    }
+
+    void EndDrag()
+    {
+        if (activeShip == null) return;
+
+        isDragging = false;
+        
+        // If onmousedown and onmouseup occurred without movement
+        if (!hasMoved)
+        {
+            RotateShip(activeShip);
+        }
+        else
+        { 
+            if (!IsValidPlacement(activeShip, State.PlacementGrid.Ships))
+            {
+                // Revert to original position if placement is invalid
+                activeShip.StartRow = tempStartRow;
+                activeShip.StartCol = tempStartCol;
+                Console.WriteLine("Invalid placement: Ship collision or out of bounds.");
+            }
+        }
+        
+        activeShip = null;
+        hasMoved = false;
+        StateHasChanged();
+    }
+    
+    void RotateShip(Models.Ship ship)
+    {
+        // Temporarily flip the orientation
+        ship.IsHorizontal = !ship.IsHorizontal;
+        
+        // Check if the rotated ship is valid
+        if (!IsValidPlacement(ship, State.PlacementGrid.Ships))
+        {
+            // Revert rotation if invalid
+            ship.IsHorizontal = !ship.IsHorizontal;
+            Console.WriteLine("Invalid rotation: Ship collision or out of bounds.");
+        }
+        StateHasChanged();
+    }
+
+    bool IsValidPlacement(Models.Ship currentShip, List<Models.Ship> allShips)
+    {
+        // Boundary check
+        if (currentShip.IsHorizontal)
+        {
+            if (currentShip.StartCol < 0 || currentShip.StartCol + currentShip.Size > GRID_SIZE || 
+                currentShip.StartRow < 0 || currentShip.StartRow >= GRID_SIZE)
+            {
+                return false;
+            }
+        }
+        else
+        {
+            if (currentShip.StartRow < 0 || currentShip.StartRow + currentShip.Size > GRID_SIZE || 
+                currentShip.StartCol < 0 || currentShip.StartCol >= GRID_SIZE)
+            {
+                return false;
+            }
+        }
+        
+        // Collision check
+        foreach (var ship in allShips)
+        {
+            if (ship == currentShip) continue; 
+            
+            // Iterate over the cells occupied by the current ship and check for overlap with the other ship
+            for (int i = 0; i < currentShip.Size; i++)
+            {
+                int r = currentShip.IsHorizontal ? currentShip.StartRow : currentShip.StartRow + i;
+                int c = currentShip.IsHorizontal ? currentShip.StartCol + i : currentShip.StartCol;
+                
+                // Check if the coordinate (r, c) is occupied
+                if (IsCoordinateOccupiedByShip(ship, r, c))
+                {
+                    return false;
+                }
+            }
+        }
+        
+        return true;
+    }
+
+    bool IsCoordinateOccupiedByShip(Models.Ship ship, int r, int c)
+    {
+        if (ship.IsHorizontal)
+        {
+            // Check if (r, c) is within the horizontal range of ship
+            return r == ship.StartRow && c >= ship.StartCol && c < ship.StartCol + ship.Size;
+        }
+        else
+        {
+            // Check if (r, c) is within the vertical range of ship
+            return c == ship.StartCol && r >= ship.StartRow && r < ship.StartRow + ship.Size;
+        }
+    }
+
+    async Task FinalizePlacement()
+    {
+        foreach (var ship in State.PlacementGrid.Ships)
+        {
+            if (!IsValidPlacement(ship, State.PlacementGrid.Ships))
+            {
+                Console.WriteLine($"Cannot start game: Invalid placement for ship {ship.Symbol}.");
+                return;
+            }
+        }
+
+        await Api.FinalizePlacementAsync(State.PlacementGrid.Ships);
+        Nav.NavigateTo("/game");
+    }
+}

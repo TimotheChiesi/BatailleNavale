@@ -77,9 +77,6 @@ public class GameService
             }
         }
 
-        // 4. Delete the "Future" from History
-        // We want to keep everything up to 'index'. 
-        // So we remove starting from 'index + 1' to the end.
         int startIndexToRemove = index + 1;
         int countToRemove = game.History.Count - startIndexToRemove;
 
@@ -236,5 +233,35 @@ public class GameService
                     return true;
 
         return false;
+    }
+    
+    public GameState? FinalizeGameSetup(Guid id, List<Ship> playerShips)
+    {
+        if (!_games.TryGetValue(id, out var game))
+            return null;
+
+        // Clear the original player grid cells
+        game.PlayerGrid.Cells = Enumerable.Range(0, 10).Select(_ => new char[10]).ToArray();
+        game.PlayerGrid.Ships = playerShips;
+        
+        // Re-populate the cells based on the user-placed ships
+        foreach (var ship in playerShips)
+        {
+            if (ship.IsHorizontal)
+            {
+                for (int i = 0; i < ship.Size; i++)
+                    game.PlayerGrid.Cells[ship.StartRow][ship.StartCol + i] = ship.Symbol;
+            }
+            else
+            {
+                for (int i = 0; i < ship.Size; i++)
+                    game.PlayerGrid.Cells[ship.StartRow + i][ship.StartCol] = ship.Symbol;
+            }
+        }
+        
+        // Update the original grid copy for rollback purposes
+        game.OriginalPlayerGrid = DeepCopyGrid(game.PlayerGrid);
+        
+        return game;
     }
 }

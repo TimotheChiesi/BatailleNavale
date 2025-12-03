@@ -26,114 +26,162 @@
 
     <div class="col-6">
         <h3>Player Grid</h3>
-        <div class="player-grid-container"> 
-            <table class="grid player-grid">
+        <div class="d-flex">
+            
+            <div class="d-flex flex-column" 
+                 style="width: 35px; height: 350px; justify-content: space-around;
+                        text-align: center; font-weight: bold; margin-top: 35px;">
                 @for (int r = 0; r < 10; r++)
                 {
-                    <tr>
-                        @for (int c = 0; c < 10; c++)
-                        {
-                            var cellValue = State.PlayerGrid[r][c];
-                            var cellClass = cellValue switch
-                            {
-                                'X' => "hit",
-                                'O' => "miss",
-                                _ => ""
-                            };
-                            <td class="cell player-cell @cellClass">
-                                @if (cellValue == 'O')
-                                {
-                                    <img src="miss.png" />
-                                }
-                            </td>
-                        }
-                    </tr>
+                    <div style="height: 35px; display: flex; align-items: center; justify-content: center;">
+                        @((char)('A' + r))
+                    </div>
                 }
-            </table>
+            </div>
 
-            @foreach (var ship in State.PlayerShips)
-            {
-                var CELL_STEP = 35;
-
-                var top = ship.StartRow * CELL_STEP;
-                var left = ship.StartCol * CELL_STEP;
+            <div class="d-flex flex-column">
                 
-                var shipStyle = string.Empty;
-                var orientation = "horizontal";
-                
-                if (ship.IsHorizontal) 
-                {
-                    var length_pixels = ship.Size * CELL_STEP; 
-                    shipStyle = $"top: {top}px; left: {left}px; width: {length_pixels}px; height: {CELL_STEP}px;";
-                }
-                else 
-                {
-                    var length_pixels = ship.Size * CELL_STEP; 
-                    shipStyle = $"top: {top}px; left: {left}px; width: {CELL_STEP}px; height: {length_pixels}px;";
-                    orientation = "vertical";
-                }
-                    
-                <div class="ship-overlay" style="@shipStyle">
-                    <img src="@($"Length{ship.Size}_{orientation}.png")" alt="Ship of size @ship.Size" />
-                    
-                    @for (int i = 0; i < ship.Size; i++)
+                <div class="d-flex" style="width: 350px; height: 35px; justify-content: space-around; text-align: center; font-weight: bold;">
+                    @for (int c = 0; c < 10; c++)
                     {
-                        // Calculate the specific cell (r, c) for the current ship segment
-                        var r = ship.IsHorizontal ? ship.StartRow : ship.StartRow + i;
-                        var c = ship.IsHorizontal ? ship.StartCol + i : ship.StartCol;
-                    
-                        // Check if the current segment of the ship has been hit ('X')
-                        if (State.PlayerGrid[r][c] == 'X') 
-                        {
-                            // Calculate the position of the 35x35 segment *relative* to the ship-overlay div
-                            var hitStyle = ship.IsHorizontal 
-                                ? $"left: {i * CELL_STEP}px; top: 0; width: {CELL_STEP}px; height: {CELL_STEP}px;"
-                                : $"top: {i * CELL_STEP}px; left: 0; width: {CELL_STEP}px; height: {CELL_STEP}px;";
-                            <div class="ship-segment-overlay" style="@hitStyle">
-                                <img class="hit-overlay" src="hit.png" />
-                            </div>
-                        }
+                        <div style="width: 35px; display: flex; align-items: center; justify-content: center;">
+                            @(c + 1)
+                        </div>
                     }
                 </div>
-            }
+
+                <div class="player-grid-container"> 
+                    <table class="grid player-grid">
+                        @for (int r = 0; r < 10; r++)
+                        {
+                            <tr>
+                                @for (int c = 0; c < 10; c++)
+                                {
+                                    var cellValue = State.PlayerGrid[r][c];
+                                    var cellClass = cellValue switch
+                                    {
+                                        'X' => "hit",
+                                        'O' => "miss",
+                                        _ => ""
+                                    };
+                                    <td class="cell player-cell @cellClass">
+                                        @if (cellValue == 'O')
+                                        {
+                                            <img src="miss.png" />
+                                        }
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </table>
+
+                    @foreach (var ship in State.PlayerShips)
+                    {
+                        var CELL_STEP = 35;
+
+                        var top = ship.StartRow * CELL_STEP;
+                        var left = ship.StartCol * CELL_STEP;
+                        
+                        var shipStyle = string.Empty;
+                        var orientation = "horizontal";
+                        
+                        if (ship.IsHorizontal) 
+                        {
+                            var length_pixels = ship.Size * CELL_STEP; 
+                            shipStyle = $"top: {top}px; left: {left}px; width: {length_pixels}px; height: {CELL_STEP}px;";
+                        }
+                        else 
+                        {
+                            var length_pixels = ship.Size * CELL_STEP; 
+                            shipStyle = $"top: {top}px; left: {left}px; width: {CELL_STEP}px; height: {length_pixels}px;";
+                            orientation = "vertical";
+                        }
+                            
+                        <div class="ship-overlay" style="@shipStyle">
+                            <img src="@($"Length{ship.Size}_{orientation}.png")" alt="Ship of size @ship.Size" />
+                            
+                            @for (int i = 0; i < ship.Size; i++)
+                            {
+                                var r = ship.IsHorizontal ? ship.StartRow : ship.StartRow + i;
+                                var c = ship.IsHorizontal ? ship.StartCol + i : ship.StartCol;
+                            
+                                if (State.PlayerGrid[r][c] == 'X') 
+                                {
+                                    var hitStyle = ship.IsHorizontal 
+                                        ? $"left: {i * CELL_STEP}px; top: 0; width: {CELL_STEP}px; height: {CELL_STEP}px;"
+                                        : $"top: {i * CELL_STEP}px; left: 0; width: {CELL_STEP}px; height: {CELL_STEP}px;";
+                                    <div class="ship-segment-overlay" style="@hitStyle">
+                                        <img class="hit-overlay" src="hit.png" />
+                                    </div>
+                                }
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
         </div>
     </div>
     
     <div class="col-6">
         <h3>Opponent Grid</h3>
-        <table class="grid opponent-grid">
-            @for (int r = 0; r < 10; r++)
-            {
-                <tr>
+        <div class="d-flex">
+            
+            <div class="d-flex flex-column" 
+                 style="width: 35px; height: 350px; justify-content: space-around;
+                        text-align: center; font-weight: bold; margin-top: 35px;">
+                @for (int r = 0; r < 10; r++)
+                {
+                    <div style="height: 35px; display: flex; align-items: center; justify-content: center;">
+                        @((char)('A' + r))
+                    </div>
+                }
+            </div>
+
+            <div class="d-flex flex-column">
+                
+                <div class="d-flex" style="width: 350px; height: 35px; justify-content: space-around; text-align: center; font-weight: bold;">
                     @for (int c = 0; c < 10; c++)
                     {
-                        var currentRow = r;
-                        var currentCol = c;
-                        var result = State.OpponentGrid[currentRow, currentCol];
-                        string cellClass = result == null ? "cell" : result.Value ? "hit" : "miss";
-
-                        <td class="@cellClass" @onclick="@(() => TryShoot(currentRow, currentCol))">
-                            @if (result.HasValue)
-                            {
-                                if (result.Value)
-                                {
-                                    <img src="hit.png" />
-                                }
-                                else
-                                {
-                                    <img src="miss.png" />
-                                }
-                            }
-                        </td>
+                        <div style="width: 35px; display: flex; align-items: center; justify-content: center;">
+                            @(c + 1)
+                        </div>
                     }
-                </tr>
-            }
-        </table>
-    </div> @* End of Opponent Grid Column *@
+                </div>
 
-</div> @* End of the row container *@
+                <table class="grid opponent-grid">
+                    @for (int r = 0; r < 10; r++)
+                    {
+                        <tr>
+                            @for (int c = 0; c < 10; c++)
+                            {
+                                var currentRow = r;
+                                var currentCol = c;
+                                var result = State.OpponentGrid[currentRow, currentCol];
+                                string cellClass = result == null ? "cell" : result.Value ? "hit" : "miss";
 
-@* Battle Log Section (Move this down) *@
+                                <td class="@cellClass" @onclick="@(() => TryShoot(currentRow, currentCol))">
+                                    @if (result.HasValue)
+                                    {
+                                        if (result.Value)
+                                        {
+                                            <img src="hit.png"/>
+                                        }
+                                        else
+                                        {
+                                            <img src="miss.png"/>
+                                        }
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    }
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
 <div class="row mt-4">
     <div class="col-12">
         <div class="card">

@@ -16,6 +16,8 @@ public class BattleshipState
     public String? Winner { get; set; }
     
     public List<MoveLog> History { get; private set; } = new();
+    
+    public Models.BattleGrid PlacementGrid { get; private set; } = new();
 
     public void Initialize(Guid gameId, char[][] playerGridFromApi, List<Ship> playerShipsFromApi, List<MoveLog> existingHistory)
     {
@@ -27,6 +29,19 @@ public class BattleshipState
 
         // Reset opponent grid
         OpponentGrid = new bool?[10, 10];
+    }
+    
+    public void InitializePlacement(Guid gameId, Models.BattleGrid initialPlayerGrid)
+    {
+        GameId = gameId;
+        PlacementGrid = initialPlayerGrid;
+        
+        // Clear game state properties that will be set on FinalizePlacement
+        PlayerGrid = Enumerable.Range(0, 10).Select(_ => new char[10]).ToArray();
+        OpponentGrid = new bool?[10, 10];
+        PlayerShips = new();
+        Winner = null;
+        History = new List<MoveLog>();
     }
 
     public void RegisterPlayerAttack(int row, int col, bool hit)

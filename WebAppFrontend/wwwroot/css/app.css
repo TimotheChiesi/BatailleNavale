@@ -81,19 +81,19 @@ a, .btn-link {
     margin: 0 auto 0 auto;
 }
 
-    .loading-progress circle {
-        fill: none;
-        stroke: #e0e0e0;
-        stroke-width: 0.6rem;
-        transform-origin: 50% 50%;
-        transform: rotate(-90deg);
-    }
+.loading-progress circle {
+    fill: none;
+    stroke: #e0e0e0;
+    stroke-width: 0.6rem;
+    transform-origin: 50% 50%;
+    transform: rotate(-90deg);
+}
 
-        .loading-progress circle:last-child {
-            stroke: #1b6ec2;
-            stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * 0.8), 500%;
-            transition: stroke-dasharray 0.05s ease-in-out;
-        }
+.loading-progress circle:last-child {
+    stroke: #1b6ec2;
+    stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * 0.8), 500%;
+    transition: stroke-dasharray 0.05s ease-in-out;
+}
 
 .loading-progress-text {
     position: absolute;
@@ -102,9 +102,9 @@ a, .btn-link {
     inset: calc(20vh + 3.25rem) 0 auto 0.2rem;
 }
 
-    .loading-progress-text:after {
-        content: var(--blazor-load-percentage-text, "Loading");
-    }
+.loading-progress-text:after {
+    content: var(--blazor-load-percentage-text, "Loading");
+}
 
 code {
     color: #c02d76;
@@ -146,7 +146,6 @@ code {
     cursor: not-allowed;
 }
 
-/* Common grid styles */
 .grid {
     border-collapse: collapse;
     margin-bottom: 2rem;
@@ -173,47 +172,37 @@ code {
     object-fit: contain;
 }
 
-/* Player Grid */
 .player-grid .player-cell {
     background-color: #e0f7fa;
 }
 
-/* Player hits */
 .player-grid .hit {
     background-color: #e0f7fa;
     color: white;
 }
 
-/* Player misses */
 .player-grid .miss {
-    background-color: #90a4ae; /* gray */
+    background-color: #90a4ae;
     color: white;
 }
 
-/* Opponent Grid empty cell */
 .opponent-grid .cell {
     background-color: #e0f7fa;;
 }
 
 .opponent-grid .cell:hover {
     background-color: #cce5ff;
-}
-
-/* Opponent hits */
-.opponent-grid .hit {
-    background-color: #f44336; /* red */
-    color: white;
-}
-
-/* Opponent misses */
-.opponent-grid .miss {
-    background-color: #90a4ae; /* gray */
-    color: white;
-}
-
-/* Hover effect for opponent grid cells */
-.opponent-grid .cell:hover {
     transform: scale(1.05);
+}
+
+.opponent-grid .hit {
+    background-color: #f44336;
+    color: white;
+}
+
+.opponent-grid .miss {
+    background-color: #90a4ae;
+    color: white;
 }
 
 .player-grid-container {
@@ -249,4 +238,16 @@ code {
     height: 100%;
     opacity: 0.8;
     object-fit: contain;
-}   
+}
+
+.darkened-opponent-grid td.cell {
+    background-color: #3f51b5;
+    opacity: 0.6;
+    cursor: default;
+    transition: none;
+}
+
+.darkened-opponent-grid td.cell:hover {
+    background-color: #3f51b5;
+    transform: none;
+}
