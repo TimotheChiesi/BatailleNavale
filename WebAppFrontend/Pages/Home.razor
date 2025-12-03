@@ -1,21 +1,27 @@
 @page "/"
 @inject NavigationManager Nav
-@inject ApiClient Api
 
-<h1>Battleship</h1>
+<div class="d-flex justify-content-center align-items-center vh-100">
+    <div class="card shadow-lg p-5 text-center" style="width: 28rem; border-radius: 1rem;">
 
-<div class="menu">
-    <button class="menu-btn" @onclick="StartLocalGame">
-        Local Game (vs AI)
-    </button>
+        <h1 class="mb-4">🚢 Battleship</h1>
 
-    <button class="menu-btn" @onclick="StartMultiplayerGame">
-        Multiplayer
-    </button>
+        <p class="text-muted mb-4">
+            Choose your game mode
+        </p>
+
+        <button class="btn btn-primary w-100 py-2 mb-3" style="font-size: 1.1rem;" @onclick="StartLocalGame">
+            🤖 Local Game (vs AI)
+        </button>
+
+        <button class="btn btn-success w-100 py-2" style="font-size: 1.1rem;" @onclick="StartMultiplayerGame">
+            🌐 Multiplayer
+        </button>
+    </div>
 </div>
 
 @code {
-    async Task StartLocalGame()
+    void StartLocalGame()
     {
         Nav.NavigateTo("/placement");
     }
