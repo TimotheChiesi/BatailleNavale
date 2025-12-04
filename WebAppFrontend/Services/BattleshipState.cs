@@ -4,10 +4,10 @@ namespace WebAppFrontend.Services;
 
 public class BattleshipState
 {
-    public char[][] PlayerGrid { get; private set; } =
-        Enumerable.Range(0, 10).Select(_ => new char[10]).ToArray();
+    public char[][] PlayerGrid { get; private set; }
     
-    public bool?[,] OpponentGrid { get; private set; } = new bool?[10, 10];
+    public bool?[,] OpponentGrid { get; private set; }
+    public int GridSize { get; private set; }
     
     public List<Ship> PlayerShips { get; private set; } = new();
 
@@ -21,26 +21,31 @@ public class BattleshipState
     
     public Models.BattleGrid PlacementGrid { get; private set; } = new();
 
-    public void Initialize(Guid gameId, char[][] playerGridFromApi, List<Ship> playerShipsFromApi, List<MoveLog> existingHistory)
+    public BattleshipState()
+    {
+        SetGridSize(10);
+    }
+
+    public void Initialize(Guid gameId, char[][] playerGridFromApi, List<Ship> playerShipsFromApi, List<MoveLog> existingHistory, int gridSize)
     {
         GameId = gameId;
+        SetGridSize(gridSize);
         PlayerGrid = playerGridFromApi;
         PlayerShips = playerShipsFromApi;
         Winner = null;
         History = existingHistory ?? new List<MoveLog>();
-
-        // Reset opponent grid
-        OpponentGrid = new bool?[10, 10];
+        OpponentGrid = new bool?[gridSize, gridSize];
     }
     
-    public void InitializePlacement(Guid gameId, Models.BattleGrid initialPlayerGrid)
+    public void InitializePlacement(Guid gameId, BattleGrid initialPlayerGrid, int gridSize)
     {
         GameId = gameId;
+        SetGridSize(gridSize);
         PlacementGrid = initialPlayerGrid;
         
         // Clear game state properties that will be set on FinalizePlacement
-        PlayerGrid = Enumerable.Range(0, 10).Select(_ => new char[10]).ToArray();
-        OpponentGrid = new bool?[10, 10];
+        PlayerGrid = Enumerable.Range(0, gridSize).Select(_ => new char[gridSize]).ToArray();
+        OpponentGrid = new bool?[gridSize, gridSize];
         PlayerShips = new();
         Winner = null;
         History = new List<MoveLog>();
@@ -79,5 +84,11 @@ public class BattleshipState
         for (int c = 0; c < cols; c++)
             OpponentGrid[r, c] = aiGridJagged[r][c];
     }
+    
+    private void SetGridSize(int size)
+    {
+        GridSize = size;
+        PlayerGrid = Enumerable.Range(0, size).Select(_ => new char[size]).ToArray();
+        OpponentGrid = new bool?[size, size];
+    }
 }
-

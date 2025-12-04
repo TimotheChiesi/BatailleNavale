@@ -18,14 +18,37 @@ else
                 pointer-events: @(isDragging ? "auto" : "none"); z-index: 100;">
     </div>
     
+    <div class="card mb-4">
+        <div class="card-header">
+            Game Parameters
+        </div>
+        <div class="card-body d-flex justify-content-center align-items-center">
+            <div class="me-4">
+                <label for="gridSize" class="form-label">Grid Size:</label>
+                <select id="gridSize" class="form-select" @bind="SelectedGridSize" @bind:after="OnGridSizeChanged">
+                    <option value="10">10x10</option>
+                    <option value="15">15x15</option>
+                    <option value="20">20x20</option>
+                </select>
+            </div>
+            <div>
+                <label for="aiDifficulty" class="form-label">AI Difficulty:</label>
+                <select id="aiDifficulty" class="form-select" @bind="selectedDifficulty">
+                    <option value="@AiDifficulty.Random">Random (Easy)</option>
+                    <option value="@AiDifficulty.TargetingRandom">Targeting Random (Perimeter Hunting)</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    
     <div class="row justify-content-center"> 
         
         <div class="col-6">
             <h3 class="text-start">Player Grid</h3> <div class="d-flex">
                 <div class="d-flex flex-column"
-                     style="width: 35px; height: 350px; justify-content: space-around;
+                     style="width: 35px; height: @(GridPixelSize)px; justify-content: space-around;
                             text-align: center; font-weight: bold; margin-top: 35px;">
-                    @for (int r = 0; r < 10; r++)
+                    @for (int r = 0; r < SelectedGridSize; r++)
                     {
                         <div style="height: 35px; display: flex; align-items: center; justify-content: center;">
                             @((char)('A' + r))
@@ -34,9 +57,9 @@ else
                 </div>
 
                 <div class="d-flex flex-column">
-                    <div class="d-flex" style="width: 350px;
+                    <div class="d-flex" style="width: @(GridPixelSize)px;
                         height: 35px; justify-content: space-around; text-align: center; font-weight: bold;">
-                        @for (int c = 0; c < 10; c++)
+                        @for (int c = 0; c < SelectedGridSize; c++)
                         {
                             <div style="width: 35px;
                                 display: flex; align-items: center; justify-content: center;">
@@ -45,12 +68,12 @@ else
                         }
                     </div>
 
-                    <div class="player-grid-container">
+                    <div class="player-grid-container" style="width: @(GridPixelSize)px; height: @(GridPixelSize)px;">
                         <table class="grid player-grid">
-                            @for (int r = 0; r < 10; r++)
+                            @for (int r = 0; r < SelectedGridSize; r++)
                             {
                                 <tr>
-                                    @for (int c = 0; c < 10; c++)
+                                    @for (int c = 0; c < SelectedGridSize; c++)
                                     {
                                         <td class="cell player-cell"></td>
                                     }
@@ -91,9 +114,9 @@ else
         <div class="col-6">
             <h3 class="text-start">Opponent Grid</h3> <div class="d-flex">
                 <div class="d-flex flex-column" 
-                     style="width: 35px; height: 350px; justify-content: space-around;
+                     style="width: 35px; height: @(GridPixelSize)px; justify-content: space-around;
                             text-align: center; font-weight: bold; margin-top: 35px;">
-                    @for (int r = 0; r < 10; r++)
+                    @for (int r = 0; r < SelectedGridSize; r++)
                     {
                         <div style="height: 35px; display: flex; align-items: center; justify-content: center;">
                             @((char)('A' + r))
@@ -102,9 +125,9 @@ else
                 </div>
 
                 <div class="d-flex flex-column">
-                    <div class="d-flex" style="width: 350px;
+                    <div class="d-flex" style="width: @(GridPixelSize)px;
                         height: 35px; justify-content: space-around; text-align: center; font-weight: bold;">
-                        @for (int c = 0; c < 10; c++)
+                        @for (int c = 0; c < SelectedGridSize; c++)
                         {
                             <div style="width: 35px;
                                 display: flex; align-items: center; justify-content: center;">
@@ -113,11 +136,11 @@ else
                         }
                     </div>
 
-                    <table class="grid darkened-opponent-grid">
-                        @for (int r = 0; r < 10; r++)
+                    <table class="grid darkened-opponent-grid" style="width: @(GridPixelSize)px; height: @(GridPixelSize)px;">
+                        @for (int r = 0; r < SelectedGridSize; r++)
                         {
                             <tr>
-                                @for (int c = 0; c < 10; c++)
+                                @for (int c = 0; c < SelectedGridSize; c++)
                                 {
                                     <td class="cell"></td>
                                 }
@@ -130,15 +153,6 @@ else
         
     </div>
     
-    <div class="mt-4 mb-4 d-flex align-items-center justify-content-center">
-        <label for="aiDifficulty" class="me-3">Select AI Difficulty:</label>
-        <select id="aiDifficulty" class="form-select w-auto" @bind="selectedDifficulty">
-            
-            <option value="@AiDifficulty.Random">Random (Easy)</option>
-            <option value="@AiDifficulty.TargetingRandom">Targetting Random (Perimeter Hunting)</option>
-        </select>
-    </div>
-
     <button class="menu-btn mt-4" @onclick="FinalizePlacement">
         Start Game
     </button>
@@ -146,7 +160,8 @@ else
 
 @code {
     private const int CELL_STEP = 35;
-    private const int GRID_SIZE = 10;
+    private int SelectedGridSize { get; set; } = 10;
+    private int GridPixelSize => SelectedGridSize * CELL_STEP;
     
     // Dragging state
     private Models.Ship? activeShip = null;
@@ -163,7 +178,12 @@ else
     
     protected override async Task OnInitializedAsync()
     {
-        await Api.StartPlacementAsync();
+        await Api.StartPlacementAsync(SelectedGridSize);
+    }
+    
+    private async Task OnGridSizeChanged()
+    {
+        await Api.StartPlacementAsync(SelectedGridSize);
     }
     
     void StartDrag(MouseEventArgs e, Models.Ship ship)
@@ -253,16 +273,16 @@ else
         // Boundary check
         if (currentShip.IsHorizontal)
         {
-            if (currentShip.StartCol < 0 || currentShip.StartCol + currentShip.Size > GRID_SIZE || 
-                currentShip.StartRow < 0 || currentShip.StartRow >= GRID_SIZE)
+            if (currentShip.StartCol < 0 || currentShip.StartCol + currentShip.Size > SelectedGridSize || 
+                currentShip.StartRow < 0 || currentShip.StartRow >= SelectedGridSize)
             {
                 return false;
             }
         }
         else
         {
-            if (currentShip.StartRow < 0 || currentShip.StartRow + currentShip.Size > GRID_SIZE || 
-                currentShip.StartCol < 0 || currentShip.StartCol >= GRID_SIZE)
+            if (currentShip.StartRow < 0 || currentShip.StartRow + currentShip.Size > SelectedGridSize || 
+                currentShip.StartCol < 0 || currentShip.StartCol >= SelectedGridSize)
             {
                 return false;
             }
@@ -315,7 +335,7 @@ else
             }
         }
 
-        await Api.FinalizePlacementAsync(State.PlacementGrid.Ships, selectedDifficulty);
+        await Api.FinalizePlacementAsync(State.PlacementGrid.Ships, selectedDifficulty, SelectedGridSize);
         Nav.NavigateTo("/game");
     }
 }

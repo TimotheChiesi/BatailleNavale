@@ -38,11 +38,12 @@ app.MapHub<BattleHub>("/battleHub");
 
 app.MapPost("/api/start", (GameService gameService, [FromBody] StartGameRequest request) =>
 {
-    var game = gameService.StartNewSinglePlayerGame();
+    var game = gameService.StartNewSinglePlayerGame(request.GridSize);
     return new GameInitResponse
     {
         GameId = game.GameId,
-        PlayerGrid = game.PlayerGrid
+        PlayerGrid = game.PlayerGrid,
+        GridSize = game.GridSize
     };
 });
 
@@ -75,7 +76,7 @@ app.MapPost("/api/rollback", (RollbackRequest req, GameService gameService) =>
 
 app.MapPost("/api/finalize", (FinalizePlacementRequest req, GameService gameService) =>
 {
-    var updatedGameState = gameService.FinalizeGameSetup(req.GameId, req.Ships, req.Difficulty);
+    var updatedGameState = gameService.FinalizeGameSetup(req.GameId, req.Ships, req.Difficulty, req.GridSize);
 
     if (updatedGameState == null)
     {
@@ -91,7 +92,8 @@ app.MapPost("/api/finalize", (FinalizePlacementRequest req, GameService gameServ
     {
         GameId = game.GameId,
         PlayerGrid = game.PlayerGrid,
-        History = game.History
+        History = game.History,
+        GridSize = game.GridSize
     });
 });
 

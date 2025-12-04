@@ -3,6 +3,7 @@ namespace Models;
 public class SinglePlayerGameState : BaseGameState
 {
     public string? Winner { get; set; }
+    public int GridSize { get; set; }
     
     // Mutable Grids
     public BattleGrid PlayerGrid { get; set; }

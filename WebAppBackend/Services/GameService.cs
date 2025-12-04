@@ -12,19 +12,20 @@ public class GameService
         _gridService = gridService;
     }
 
-    public SinglePlayerGameState StartNewSinglePlayerGame()
+    public SinglePlayerGameState StartNewSinglePlayerGame(int gridSize)
     {
-        var playerGrid = _gridService.GenerateGrid();
-        var aiGrid = _gridService.GenerateGrid();
+        var playerGrid = _gridService.GenerateGrid(gridSize);
+        var aiGrid = _gridService.GenerateGrid(gridSize);
         
         var game = new SinglePlayerGameState
         {
+            GridSize = gridSize,
             PlayerGrid = playerGrid,
             AiGrid = aiGrid,
             OriginalPlayerGrid = DeepCopyGrid(playerGrid),
             OriginalAiGrid = DeepCopyGrid(aiGrid),
             
-            AiMoves = GenerateAiMoves(),
+            AiMoves = GenerateAiMoves(gridSize),
             History = new List<MoveLog>()
         };
 
@@ -90,7 +91,7 @@ public class GameService
         game.Winner = null;
         game.AiTargetStack.Clear();
 
-        game.AiMoves = GenerateAiMoves();
+        game.AiMoves = GenerateAiMoves(game.GridSize);
 
         for (int i = 0; i < index; i++)
         {
@@ -131,11 +132,12 @@ public class GameService
 
     private bool?[][] ConvertGridToBool(char[][] cells)
     {
-        var result = new bool?[10][];
-        for (int r = 0; r < 10; r++)
+        int size = cells.Length;
+        var result = new bool?[size][];
+        for (int r = 0; r < size; r++)
         {
-            result[r] = new bool?[10];
-            for (int c = 0; c < 10; c++)
+            result[r] = new bool?[size];
+            for (int c = 0; c < size; c++)
             {
                 char cell = cells[r][c];
                 result[r][c] = cell switch
@@ -158,12 +160,12 @@ public class GameService
         return null;
     }
 
-    private Queue<(int Row, int Col)> GenerateAiMoves()
+    private Queue<(int Row, int Col)> GenerateAiMoves(int gridSize)
     {
         var moves = new List<(int, int)>();
 
-        for (int r = 0; r < 10; r++)
-            for (int c = 0; c < 10; c++)
+        for (int r = 0; r < gridSize; r++)
+            for (int c = 0; c < gridSize; c++)
                 moves.Add((r, c));
 
         return new Queue<(int, int)>(moves.OrderBy(_ => Random.Shared.Next()));
@@ -389,7 +391,7 @@ public class GameService
         foreach (var (r, c) in neighbors)
         {
             // Check bounds and if it's already been attacked
-            if (r >= 0 && r < 10 && c >= 0 && c < 10 && game.PlayerGrid.Cells[r][c] is not 'X' and not 'O')
+            if (r >= 0 && r < game.GridSize && c >= 0 && c < game.GridSize && game.PlayerGrid.Cells[r][c] is not 'X' and not 'O')
             {
                 game.AiTargetStack.Push((r, c));
             }
@@ -403,7 +405,7 @@ public class GameService
         return grid.Any(row => row.Any(IsShip));
     }
     
-    public BaseGameState? FinalizeGameSetup(Guid id, List<Ship> playerShips, AiDifficulty difficulty)
+    public BaseGameState? FinalizeGameSetup(Guid id, List<Ship> playerShips, AiDifficulty difficulty, int gridSize)
     {
         if (!_games.TryGetValue(id, out var baseGame))
             return null;
@@ -413,9 +415,10 @@ public class GameService
             throw new Exception("FinalizeGameSetup is not allowed in Multiplayer games.");
         }
         // Clear the original player grid cells
-        game.PlayerGrid.Cells = Enumerable.Range(0, 10).Select(_ => new char[10]).ToArray();
+        game.PlayerGrid.Cells = Enumerable.Range(0, gridSize).Select(_ => new char[gridSize]).ToArray();
         game.PlayerGrid.Ships = playerShips;
         game.AiDifficulty = difficulty;
+        game.GridSize = gridSize;
         
         // Re-populate the cells based on the user-placed ships
         foreach (var ship in playerShips)

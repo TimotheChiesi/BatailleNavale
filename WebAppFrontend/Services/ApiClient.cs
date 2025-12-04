@@ -14,15 +14,6 @@ public class ApiClient
         _battleshipState = battleshipState;
     }
 
-    public async Task StartGameAsync()
-    {
-        var response = await _httpClient.PostAsJsonAsync("/api/start", new { });
-        var data = await response.Content.ReadFromJsonAsync<GameInitResponse>();
-
-        if (data != null)
-            _battleshipState.Initialize(data.GameId, data.PlayerGrid.Cells, data.PlayerGrid.Ships, data.History);
-    }
-
     public async Task AttackAsync(int row, int col)
     {
         var request = new AttackRequest
@@ -82,24 +73,26 @@ public class ApiClient
         }
     }
     
-    public async Task StartPlacementAsync()
+    public async Task StartPlacementAsync(int gridSize)
     {
-        var response = await _httpClient.PostAsJsonAsync("/api/start", new { });
+        var request = new StartGameRequest { GridSize = gridSize };
+        var response = await _httpClient.PostAsJsonAsync("/api/start", request);
         var data = await response.Content.ReadFromJsonAsync<GameInitResponse>();
 
         if (data != null)
         {
-            _battleshipState.InitializePlacement(data.GameId, data.PlayerGrid);
+            _battleshipState.InitializePlacement(data.GameId, data.PlayerGrid, data.GridSize);
         }
     }
     
-    public async Task FinalizePlacementAsync(List<Models.Ship> ships, AiDifficulty difficulty)
+    public async Task FinalizePlacementAsync(List<Models.Ship> ships, AiDifficulty difficulty, int gridSize)
     {
         var request = new FinalizePlacementRequest
         {
             GameId = _battleshipState.GameId,
             Ships = ships,
-            Difficulty = difficulty
+            Difficulty = difficulty,
+            GridSize = gridSize
         };
 
         var response = await _httpClient.PostAsJsonAsync("/api/finalize", request);
@@ -107,7 +100,7 @@ public class ApiClient
 
         if (data != null)
         {
-            _battleshipState.Initialize(data.GameId, data.PlayerGrid.Cells, data.PlayerGrid.Ships, data.History);
+            _battleshipState.Initialize(data.GameId, data.PlayerGrid.Cells, data.PlayerGrid.Ships, data.History, data.GridSize);
         }
     }
 
@@ -131,7 +124,8 @@ public class ApiClient
             init.GameId,
             init.PlayerGrid.Cells,
             init.PlayerGrid.Ships,
-            new List<MoveLog>()
+            new List<MoveLog>(),
+           10
         );
         _battleshipState.CurrentPlayerTurn = init.StartingPlayer;
     }
