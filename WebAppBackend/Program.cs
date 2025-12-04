@@ -115,7 +115,8 @@ app.MapPost("/api/multiplayer/start", (GameService gameService, MultiplayerStart
         { 
             GameId = game.GameId,
             PlayerGrid = game.Player1Grid, // Return P1's secrets
-            StartingPlayer = "You"
+            StartingPlayer = "You",
+            GridSize = game.GridSize
         });
     }
     else if (request.PlayerId == game.Player2Id)
@@ -124,7 +125,8 @@ app.MapPost("/api/multiplayer/start", (GameService gameService, MultiplayerStart
         { 
             GameId = game.GameId,
             PlayerGrid = game.Player2Grid, // Return P2's secrets
-            StartingPlayer = "Opponent"
+            StartingPlayer = "Opponent",
+            GridSize = game.GridSize
         });
     }
 

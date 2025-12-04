@@ -33,7 +33,7 @@ public class GameService
         return game;
     }
     
-    public void StartNewMultiplayerGame(string roomIdString, string player1Id, string player2Id)
+    public void StartNewMultiplayerGame(string roomIdString, string player1Id, string player2Id, int gridSize)
     {
         // 1. Convert the Room String to a GUID
         if (!Guid.TryParse(roomIdString, out Guid gameId))
@@ -45,10 +45,11 @@ public class GameService
         {
             GameId = gameId, // The Room GUID becomes the Game GUID
             Player1Id = player1Id,
-            Player1Grid = _gridService.GenerateGrid(),
+            Player1Grid = _gridService.GenerateGrid(gridSize),
             Player2Id = player2Id,
-            Player2Grid = _gridService.GenerateGrid(),
-            History = new List<MultiplayerMoveLog>()
+            Player2Grid = _gridService.GenerateGrid(gridSize),
+            History = new List<MultiplayerMoveLog>(),
+            GridSize = gridSize
         };
 
         _games[gameId] = game;

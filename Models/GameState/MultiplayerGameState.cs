@@ -17,6 +17,8 @@ public class MultiplayerGameState : BaseGameState
     public PlayerRole? Winner { get; set; }
     
     public List<MultiplayerMoveLog> History { get; set; } = new();
+    
+    public int GridSize { get; set; } = 10;
 }
 
 public enum PlayerRole

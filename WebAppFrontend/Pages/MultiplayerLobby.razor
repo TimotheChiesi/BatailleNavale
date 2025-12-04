@@ -22,6 +22,25 @@
             <label class="form-label fw-bold">Pseudo</label>
             <input class="form-control" placeholder="Your nickname" @bind="CurrentPlayer.Pseudo" />
         </div>
+        
+        <div class="mb-3">
+            <label class="form-label fw-bold">Grid Size</label>
+            <select class="form-select" 
+                    @bind="GridSize"
+                    disabled="@RoomGridSize.HasValue">
+                <option value="10">10x10</option>
+                <option value="15">15x15</option>
+                <option value="20">20x20</option>
+            </select>
+            @if (RoomGridSize.HasValue)
+            {
+                <small class="text-muted">Grid size locked to @RoomGridSize.Value x @RoomGridSize.Value.</small>
+            }
+            else if (IsPlayer1)
+            {
+                <small class="text-muted">Select your preferred grid size.</small>
+            }
+        </div>
 
         <button class="btn btn-primary w-100 mb-3" @onclick="JoinGame">
             🔗 Join Game
@@ -48,6 +67,10 @@
     public string Status { get; set; } = "Not connected";
     public string Player1Info { get; set; } = "";
     public string Player2Info { get; set; } = "";
+    
+    public int GridSize { get; set; } = 10;
+    public int? RoomGridSize { get; set; }
+    private bool IsPlayer1 { get; set; }
 
     private Player CurrentPlayer = new();
 
@@ -60,12 +83,23 @@
             .WithAutomaticReconnect()
             .Build();
 
-        hubConnection.On<string, int, string>("JoinedRoom", (room, playerNumber, pseudo) =>
+        hubConnection.On<string, int, string, int?, bool>("JoinedRoom", (room, playerNumber, pseudo, roomGridSize, isPlayer1) =>
         {
             Status = $"Joined {room} as Player {playerNumber} ({pseudo})";
+            
+            // Set the room properties
+            RoomGridSize = roomGridSize;
+            IsPlayer1 = isPlayer1;
+
+            // If a size is already set in the room (P2 joining or P1 rejoining), lock the size value
+            if (RoomGridSize.HasValue)
+            {
+                GridSize = RoomGridSize.Value;
+            }
+            
             StateHasChanged();
         });
-
+        
         hubConnection.On<string, string, string>("GameReady", (room, player1Name, player2Name) =>
         {
             Status = $"Game ready in room {room}!";
@@ -87,7 +121,7 @@
         if (hubConnection != null)
         {
             CurrentPlayer.PlayerId = Guid.NewGuid().ToString();
-            await hubConnection.InvokeAsync("JoinRoom", RoomId, CurrentPlayer);
+            await hubConnection.InvokeAsync("JoinRoom", RoomId, CurrentPlayer, GridSize); 
         }
     }
 

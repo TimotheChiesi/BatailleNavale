@@ -16,11 +16,14 @@ public class BattleHub : Hub
         _gameService = gameService;
     }
 
-    public async Task JoinRoom(string roomId, Player player)
+    public async Task JoinRoom(string roomId, Player player, int gridSize)
     {
         GameRoom room;
         string connectionId = Context.ConnectionId;
         bool isGameStarting = false;
+        
+        int? roomGridSize = null;
+        bool isPlayer1 = false;
 
         lock (_lock)
         {
@@ -44,6 +47,9 @@ public class BattleHub : Hub
             {
                 room.Player1 = player;
                 room.Player1Connection = connectionId;
+                room.GridSize = gridSize; 
+                roomGridSize = room.GridSize;
+                isPlayer1 = true;
                 Console.WriteLine("Player1 joined with ID: " + connectionId);
             }
             else if (room.Player2 is null)
@@ -51,6 +57,8 @@ public class BattleHub : Hub
                 room.Player2 = player;
                 room.Player2Connection = connectionId;
                 isGameStarting = true;
+                roomGridSize = room.GridSize;
+                isPlayer1 = false;
                 Console.WriteLine("Player2 joined with ID: " + connectionId);
             }
             else
@@ -63,11 +71,11 @@ public class BattleHub : Hub
         // Add this connection to the room group
         await Groups.AddToGroupAsync(connectionId, roomId);
 
-        await Clients.Group(roomId).SendAsync("JoinedRoom", roomId, 1, room.Player1!.PlayerId);
-        if (room.Player2Connection != null)
-        {
-            await Clients.Group(roomId).SendAsync("JoinedRoom", roomId, 2, room.Player2!.PlayerId);
-        }
+        await Clients.Caller.SendAsync("JoinedRoom", roomId, room.Player1.PlayerId == player.PlayerId ? 1 : 2, room.Player1.PlayerId == player.PlayerId ? room.Player1.Pseudo : room.Player2!.Pseudo, roomGridSize, isPlayer1);
+        // if (room.Player2Connection != null)
+        // {
+        //     await Clients.Group(roomId).SendAsync("JoinedRoom", roomId, 2, room.Player2!.PlayerId);
+        // }
 
         // Start game if both players joined
         if (isGameStarting)
@@ -76,7 +84,7 @@ public class BattleHub : Hub
             await Clients.Group(roomId).SendAsync("GameReady", roomId, room.Player1!.Pseudo, room.Player2!.Pseudo);
 
             // Create game in memory
-            _gameService.StartNewMultiplayerGame(roomId, room.Player1.PlayerId, room.Player2.PlayerId);
+            _gameService.StartNewMultiplayerGame(roomId, room.Player1.PlayerId, room.Player2.PlayerId, room.GridSize!.Value);
 
             // Notify both players to navigate/start game
             await Clients.Group(roomId).SendAsync("StartGame", roomId);

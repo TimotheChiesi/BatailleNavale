@@ -131,7 +131,7 @@ public class ApiClient
             init.PlayerGrid.Cells,
             init.PlayerGrid.Ships,
             new List<MoveLog>(),
-           10
+           init.GridSize
         );
         _battleshipState.CurrentPlayerTurn = init.StartingPlayer;
     }
