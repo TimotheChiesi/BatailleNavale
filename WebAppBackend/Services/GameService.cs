@@ -24,7 +24,7 @@ public class GameService
             OriginalPlayerGrid = DeepCopyGrid(playerGrid),
             OriginalAiGrid = DeepCopyGrid(aiGrid),
             
-            AiMoves = GenerateAiMoves(),
+            AiMoves = GenerateAiMoves(new List<MoveLog>()),
             History = new List<MoveLog>()
         };
 
@@ -90,7 +90,11 @@ public class GameService
         game.Winner = null;
         game.AiTargetStack.Clear();
 
-        game.AiMoves = GenerateAiMoves();
+        int keepCount = index;
+        if (game.History.Count > keepCount)
+            game.History.RemoveRange(keepCount, game.History.Count - keepCount);
+        
+        game.AiMoves = GenerateAiMoves(game.History);
 
         for (int i = 0; i < index; i++)
         {
@@ -109,17 +113,7 @@ public class GameService
                     bool aiHit = aiAttack.AiAttackSucceeded;
                     game.PlayerGrid.Cells[aiAttack.Row][aiAttack.Col] = aiHit ? 'X' : 'O';
                 }
-
-                game.AiMoves.Dequeue();
             }
-        }
-
-        int startIndexToRemove = index + 1;
-        int countToRemove = game.History.Count - startIndexToRemove;
-
-        if (countToRemove > 0)
-        {
-            game.History.RemoveRange(startIndexToRemove, countToRemove);
         }
 
         return new RollbackResponse
@@ -158,13 +152,27 @@ public class GameService
         return null;
     }
 
-    private Queue<(int Row, int Col)> GenerateAiMoves()
+    private Queue<(int Row, int Col)> GenerateAiMoves(List<MoveLog> history)
     {
-        var moves = new List<(int, int)>();
+        // Collect all AI positions already used in the history
+        var usedPositions = history
+            .SelectMany(h => h.AiAttacks)
+            .Select(a => (a.Row, a.Col))
+            .ToHashSet();
+
+        var moves = new List<(int Row, int Col)>();
 
         for (int r = 0; r < 10; r++)
+        {
             for (int c = 0; c < 10; c++)
-                moves.Add((r, c));
+            {
+                // Only add moves the AI hasn't tried before
+                if (!usedPositions.Contains((r, c)))
+                {
+                    moves.Add((r, c));
+                }
+            }
+        }
 
         return new Queue<(int, int)>(moves.OrderBy(_ => Random.Shared.Next()));
     }
