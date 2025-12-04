@@ -10,16 +10,33 @@
 
 @if (State.Winner != null)
 {
-    <div class="alert alert-success text-center" role="alert">
+    @if (State.Winner == "Player")
+    {
+        <div class="alert alert-success text-center" role="alert">
+            <h4 class="alert-heading">Game Ended!</h4>
+            <p>
+                <strong>
+                    "You have won the game!"
+                </strong>
+            </p>
+            <hr>
+            <button class="btn btn-primary" @onclick="PlayAgain">Play Again</button>
+        </div>
+    }
+    else
+    {
+    <div class="alert alert-danger text-center" role="alert">
         <h4 class="alert-heading">Game Ended!</h4>
         <p>
             <strong>
-                @((State.Winner == "Player") ? "You have won the game!" : "AI has won the game!")
+                "AI has won the game!"
             </strong>
         </p>
         <hr>
         <button class="btn btn-primary" @onclick="PlayAgain">Play Again</button>
     </div>
+    }
+    
 }
 
 <div class="row justify-content-center">

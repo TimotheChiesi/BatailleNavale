@@ -12,7 +12,7 @@ builder.Services.AddScoped<ApiClient>();
 
 builder.Services.AddScoped(sp => new HttpClient
 {
-    BaseAddress = new Uri("http://localhost:5001") 
+    BaseAddress = new Uri("http://localhost:5120") 
 });
 
 builder.Services.AddScoped<AttackGrpcWebClient>(sp =>

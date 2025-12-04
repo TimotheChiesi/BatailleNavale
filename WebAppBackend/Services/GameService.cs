@@ -5,19 +5,19 @@ namespace WebAppBackend.Services;
 public class GameService
 {
     private readonly GridService _gridService;
-    private readonly Dictionary<Guid, GameState> _games = new();
+    private readonly Dictionary<Guid, BaseGameState> _games = new();
 
     public GameService(GridService gridService)
     {
         _gridService = gridService;
     }
 
-    public GameState StartNewGame(AiDifficulty difficulty)
+    public SinglePlayerGameState StartNewSinglePlayerGame()
     {
         var playerGrid = _gridService.GenerateGrid();
         var aiGrid = _gridService.GenerateGrid();
         
-        var game = new GameState
+        var game = new SinglePlayerGameState
         {
             PlayerGrid = playerGrid,
             AiGrid = aiGrid,
@@ -32,6 +32,37 @@ public class GameService
         return game;
     }
     
+    public void StartNewMultiplayerGame(string roomIdString, string player1Id, string player2Id)
+    {
+        // 1. Convert the Room String to a GUID
+        if (!Guid.TryParse(roomIdString, out Guid gameId))
+        {
+            throw new ArgumentException("Invalid Room ID format");
+        }
+
+        var game = new MultiplayerGameState
+        {
+            GameId = gameId, // The Room GUID becomes the Game GUID
+            Player1Id = player1Id,
+            Player1Grid = _gridService.GenerateGrid(),
+            Player2Id = player2Id,
+            Player2Grid = _gridService.GenerateGrid(),
+            History = new List<MultiplayerMoveLog>()
+        };
+
+        _games[gameId] = game;
+    }
+
+    public MultiplayerGameState? GetMultiplayerGame(string idString)
+    {
+        if (Guid.TryParse(idString, out Guid id))
+        {
+            _games.TryGetValue(id, out var game);
+            return game as MultiplayerGameState;
+        }
+        return null;
+    }
+    
     private BattleGrid DeepCopyGrid(BattleGrid source)
     {
         return new BattleGrid
@@ -43,8 +74,13 @@ public class GameService
 
     public RollbackResponse RollbackGame(Guid id, int index)
     {
-        if (!_games.TryGetValue(id, out var game))
+        if (!_games.TryGetValue(id, out var baseGame))
             throw new Exception("Game not found.");
+        
+        if (baseGame is not SinglePlayerGameState game)
+        {
+            throw new Exception("Rollback is not allowed in Multiplayer games.");
+        }
 
         if (index < 0 || index > game.History.Count)
             throw new Exception("Invalid rollback index.");
@@ -113,10 +149,13 @@ public class GameService
         return result;
     }
 
-    public GameState? GetGame(Guid id)
+    public SinglePlayerGameState? GetGame(Guid id)
     {
-        _games.TryGetValue(id, out var game);
-        return game;
+        if (_games.TryGetValue(id, out var baseGame))
+        {
+            return baseGame as SinglePlayerGameState;
+        }
+        return null;
     }
 
     private Queue<(int Row, int Col)> GenerateAiMoves()
@@ -130,7 +169,7 @@ public class GameService
         return new Queue<(int, int)>(moves.OrderBy(_ => Random.Shared.Next()));
     }
     
-    public AttackResponse Attack(GameState game, int row, int col)
+    public AttackResponse Attack(SinglePlayerGameState game, int row, int col)
     {
         // If game is already over, simply return winner info
         if (game.Winner != null)
@@ -243,7 +282,72 @@ public class GameService
         }
     }
     
-    private (int Row, int Col) GetNextAiMove(GameState game)
+    public MultiplayerAttackResponse? AttackMultiplayer(MultiplayerGameState multiplayerGameState, string playerId, int row, int col)
+    {
+        // If game is already over, simply return winner info
+        if (multiplayerGameState.Winner != null)
+        {
+            return new MultiplayerAttackResponse
+            {
+                AttackIndex = multiplayerGameState.History.Count,
+                PlayerAttackSucceeded = false,
+                Winner = multiplayerGameState.Winner == PlayerRole.Player1 ? multiplayerGameState.Player1Id : multiplayerGameState.Player2Id
+            };
+        }
+        
+        if (multiplayerGameState.CurrentTurnPlayerId == playerId)
+        {
+            char cell = multiplayerGameState.OpponentGrid.Cells[row][col];
+            bool playerHit = cell is >= 'A' and <= 'F';
+            
+            multiplayerGameState.OpponentGrid.Cells[row][col] = playerHit ? 'X' : 'O';
+            
+            var moveLog = new MultiplayerMoveLog()
+            {
+                AttackerId = playerId,
+                Row = row,
+                Col = col,
+                PlayerAttackSucceeded = playerHit
+            };
+            
+            // Check if player has won
+            if (!GridHasShips(multiplayerGameState.OpponentGrid.Cells))
+            {
+                multiplayerGameState.History.Insert(multiplayerGameState.History.Count, moveLog);
+            
+                multiplayerGameState.Winner = multiplayerGameState.CurrentPlayerTurn;
+                
+                return new MultiplayerAttackResponse
+                {
+                    AttackIndex = multiplayerGameState.History.Count,
+                    PlayerAttackSucceeded = true,
+                    Winner = multiplayerGameState.Winner == PlayerRole.Player1 ? multiplayerGameState.Player1Id : multiplayerGameState.Player2Id,
+                    MultiplayerMoveLog = moveLog
+                };
+            }
+
+            if (!playerHit)
+            {
+                multiplayerGameState.NextTurn();
+            }
+            
+            multiplayerGameState.History.Insert(multiplayerGameState.History.Count, moveLog);
+            return new MultiplayerAttackResponse
+            {
+                AttackIndex = multiplayerGameState.History.Count,
+                PlayerAttackSucceeded = playerHit,
+                Winner = null,
+                MultiplayerMoveLog = moveLog
+            };
+        }
+        else
+        {
+            return null;
+        }
+    }
+
+    
+    private (int Row, int Col) GetNextAiMove(SinglePlayerGameState game)
     {
         if (game.AiDifficulty == AiDifficulty.TargetingRandom)
         {
@@ -271,7 +375,7 @@ public class GameService
         return move;
     }
 
-    private void AddNeighborsToTargetStack(GameState game, int row, int col)
+    private void AddNeighborsToTargetStack(SinglePlayerGameState game, int row, int col)
     {
         // Potential neighbors (Up, Down, Left, Right)
         var neighbors = new[]
@@ -299,11 +403,15 @@ public class GameService
         return grid.Any(row => row.Any(IsShip));
     }
     
-    public GameState? FinalizeGameSetup(Guid id, List<Ship> playerShips, AiDifficulty difficulty)
+    public BaseGameState? FinalizeGameSetup(Guid id, List<Ship> playerShips, AiDifficulty difficulty)
     {
-        if (!_games.TryGetValue(id, out var game))
+        if (!_games.TryGetValue(id, out var baseGame))
             return null;
 
+        if (baseGame is not SinglePlayerGameState game)
+        {
+            throw new Exception("FinalizeGameSetup is not allowed in Multiplayer games.");
+        }
         // Clear the original player grid cells
         game.PlayerGrid.Cells = Enumerable.Range(0, 10).Select(_ => new char[10]).ToArray();
         game.PlayerGrid.Ships = playerShips;

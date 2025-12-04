@@ -54,7 +54,7 @@ public class ApiClient
             {
                 foreach (var aiAttack in data.AiAttackResults)
                 {
-                    _battleshipState.RegisterAiAttack(aiAttack.Row, aiAttack.Col, aiAttack.AiAttackSucceeded);
+                    _battleshipState.RegisterOpponentAttack(aiAttack.Row, aiAttack.Col, aiAttack.AiAttackSucceeded);
                 }
             }
             
@@ -111,4 +111,28 @@ public class ApiClient
         }
     }
 
+    public async Task GetMultiplayerGameAsync(string roomId, string playerId)
+    {
+        var request = new MultiplayerStartRequest
+        {
+            RoomId = roomId,
+            PlayerId = playerId
+        };
+        
+        var response = await _httpClient.PostAsJsonAsync("/api/multiplayer/start", request);
+        if (!response.IsSuccessStatusCode)
+            return;
+
+        var init = await response.Content.ReadFromJsonAsync<GameInitResponse>();
+        if (init == null)
+            return;
+
+        _battleshipState.Initialize(
+            init.GameId,
+            init.PlayerGrid.Cells,
+            init.PlayerGrid.Ships,
+            new List<MoveLog>()
+        );
+        _battleshipState.CurrentPlayerTurn = init.StartingPlayer;
+    }
 }

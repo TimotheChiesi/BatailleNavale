@@ -17,6 +17,8 @@ public class BattleshipState
     
     public List<MoveLog> History { get; private set; } = new();
     
+    public string CurrentPlayerTurn { get; set; }
+    
     public Models.BattleGrid PlacementGrid { get; private set; } = new();
 
     public void Initialize(Guid gameId, char[][] playerGridFromApi, List<Ship> playerShipsFromApi, List<MoveLog> existingHistory)
@@ -48,14 +50,19 @@ public class BattleshipState
     {
         OpponentGrid[row, col] = hit;
     }
-
-    public void RegisterAiAttack(int row, int col, bool hit)
+    
+    public void RegisterOpponentAttack(int row, int col, bool hit)
     {
         var symbol = hit ? 'X' : 'O';
         PlayerGrid[row][col] = symbol;
     }
 
     public void AddTurn(MoveLog turn)
+    {
+        History = History.Append(turn).ToList();
+    }
+    
+    public void AddTurnMultiplayer(MultiplayerMoveLog turn)
     {
         History = History.Append(turn).ToList();
     }
