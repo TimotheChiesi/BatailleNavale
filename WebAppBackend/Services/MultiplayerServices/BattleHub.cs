@@ -99,7 +99,7 @@ public class BattleHub : Hub
         if (result != null)
         {
             // 4. Notify the attacking player (optional, they already know)
-            await Clients.Caller.SendAsync("AttackResult", row, col, result.PlayerAttackSucceeded, result.Winner, result.MultiplayerMoveLog);
+            await Clients.Caller.SendAsync("AttackResult", row, col, result.PlayerAttackSucceeded, result.Winner, result.MultiplayerMoveLog, result.AttackStatus);
 
             // 5. Notify the opponent about the attack
             string opponentConnectionId = (room.Player1.PlayerId == playerId) ? room.Player2Connection : room.Player1Connection;
@@ -107,7 +107,7 @@ public class BattleHub : Hub
             if (!string.IsNullOrEmpty(opponentConnectionId))
             {
                 await Clients.Client(opponentConnectionId).SendAsync(
-                    "ReceiveAttack", row, col, result.PlayerAttackSucceeded, result.MultiplayerMoveLog
+                    "ReceiveAttack", row, col, result.PlayerAttackSucceeded, result.MultiplayerMoveLog, result.AttackStatus
                 );
             }
 

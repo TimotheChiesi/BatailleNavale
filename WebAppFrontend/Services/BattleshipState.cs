@@ -19,7 +19,9 @@ public class BattleshipState
     
     public string CurrentPlayerTurn { get; set; }
     
-    public Models.BattleGrid PlacementGrid { get; private set; } = new();
+    public BattleGrid PlacementGrid { get; private set; } = new();
+
+    public List<string>? AttackStatus { get; set; } = new();
 
     public BattleshipState()
     {

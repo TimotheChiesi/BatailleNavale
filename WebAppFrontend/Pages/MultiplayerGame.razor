@@ -34,6 +34,25 @@ else
         }
         
     }
+    
+    <div class="mb-3">
+        <div class="card">
+            <div class="card-header">
+                Attack Status
+            </div>
+            <div class="card-body">
+                @if (State.AttackStatus != null && State.AttackStatus.Any())
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var status in State.AttackStatus)
+                        {
+                            <li class="list-group-item">@status</li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    </div>
 
     <h4>Turn: @State.CurrentPlayerTurn</h4>
     <div class="row justify-content-center">
@@ -230,7 +249,7 @@ else
             .WithAutomaticReconnect()
             .Build();
 
-        _hubConnection.On<int, int, bool, MultiplayerMoveLog>("ReceiveAttack", (row, col, hit, moveLog) =>
+        _hubConnection.On<int, int, bool, MultiplayerMoveLog, List<string>?>("ReceiveAttack", (row, col, hit, moveLog, attackStatus) =>
         {
             InvokeAsync(() =>
             {
@@ -242,12 +261,20 @@ else
                 {
                     State.CurrentPlayerTurn = "Your turn";
                 }
+
+                if (attackStatus != null)
+                {
+                    State.AttackStatus = attackStatus
+                    .Select(s => $"Your opponent: {s}")
+                        .ToList();
+                }
+                
                 
                 StateHasChanged();
             });
         });
         
-        _hubConnection.On<int, int, bool, string?, MultiplayerMoveLog?>("AttackResult", (row, col, hit, winner, moveLog) =>
+        _hubConnection.On<int, int, bool, string?, MultiplayerMoveLog?, List<string>?>("AttackResult", (row, col, hit, winner, moveLog, attackStatus) =>
         {
             InvokeAsync(() =>
             {
@@ -264,6 +291,14 @@ else
                         State.CurrentPlayerTurn = "Opponent's turn";
                     }
                 }
+                
+                if (attackStatus != null)
+                {
+                    State.AttackStatus = attackStatus
+                        .Select(s => $"You: {s}")
+                        .ToList();
+                }
+                
                 StateHasChanged();
             });
         });

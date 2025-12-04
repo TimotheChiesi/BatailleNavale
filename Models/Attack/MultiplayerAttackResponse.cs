@@ -7,4 +7,6 @@ public class MultiplayerAttackResponse
     public string? Winner { get; set; }
     
     public MultiplayerMoveLog MultiplayerMoveLog { get; set; }
+    
+    public List<string>? AttackStatus { get; set; }
 }
