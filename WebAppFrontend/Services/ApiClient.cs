@@ -29,6 +29,12 @@ public class ApiClient
         if (data != null)
         {
             _battleshipState.RegisterPlayerAttack(row, col, data.PlayerAttackSucceeded);
+
+            if (data.AttackStatus != null)
+            {
+                _battleshipState.AttackStatus = data.AttackStatus;
+            }
+            
             var moveLog = new MoveLog
             {
                 Row = row,

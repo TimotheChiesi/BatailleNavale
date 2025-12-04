@@ -192,12 +192,23 @@ public class GameService
                 Winner = game.Winner
             };
         }
+
+        var attackStatus = new List<string>();
         
         // Player's turn
         char cell = game.AiGrid.Cells[row][col];
-        bool playerHit = cell is >= 'A' and <= 'F';
+        bool playerHit = IsShip(cell);
 
         game.AiGrid.Cells[row][col] = playerHit ? 'X' : 'O';
+        
+        if (playerHit)
+        {
+            attackStatus.AddRange(GetAttackStatus(cell, game.AiGrid, "You"));   
+        }
+        else
+        {
+            attackStatus.Add("You missed your shot");
+        }
         
         var moveLog = new MoveLog
         {
@@ -217,7 +228,8 @@ public class GameService
                 AttackIndex = game.History.Count,
                 PlayerAttackSucceeded = true,
                 AiAttackResults = new(),
-                Winner = "Player"
+                Winner = "Player",
+                AttackStatus = attackStatus
             };
         }
         
@@ -235,6 +247,15 @@ public class GameService
                 aiHit = IsShip(aiCell);
 
                 game.PlayerGrid.Cells[aiRow][aiCol] = aiHit ? 'X' : 'O';
+                
+                if (aiHit)
+                {
+                    attackStatus.AddRange(GetAttackStatus(aiCell, game.PlayerGrid, "Opponent"));
+                }
+                else
+                {
+                    attackStatus.Add("Opponent missed their shot");
+                }
 
                 AiAttackResult aiAttackResult = new AiAttackResult
                 {
@@ -261,7 +282,8 @@ public class GameService
                         AttackIndex = game.History.Count,
                         PlayerAttackSucceeded = playerHit,
                         AiAttackResults = aiAttackResults,
-                        Winner = "AI"
+                        Winner = "AI",
+                        AttackStatus = attackStatus
                     };
                 }
             } while (aiHit); // AI plays again if it hit
@@ -275,7 +297,8 @@ public class GameService
                 AttackIndex = game.History.Count,
                 PlayerAttackSucceeded = playerHit,
                 AiAttackResults = aiAttackResults,
-                Winner = null
+                Winner = null,
+                AttackStatus = attackStatus
             };
         }
         else
@@ -287,7 +310,8 @@ public class GameService
                 AttackIndex = game.History.Count,
                 PlayerAttackSucceeded = playerHit,
                 AiAttackResults = new(),
-                Winner = null
+                Winner = null,
+                AttackStatus = attackStatus
             };
         }
     }
@@ -305,6 +329,8 @@ public class GameService
             };
         }
         
+        var attackStatus = new List<string>();
+        
         if (multiplayerGameState.CurrentTurnPlayerId == playerId)
         {
             char cell = multiplayerGameState.OpponentGrid.Cells[row][col];
@@ -312,7 +338,16 @@ public class GameService
             
             multiplayerGameState.OpponentGrid.Cells[row][col] = playerHit ? 'X' : 'O';
             
-            var moveLog = new MultiplayerMoveLog()
+            if (playerHit)
+            {
+                attackStatus.AddRange(GetAttackStatus(cell, multiplayerGameState.OpponentGrid, "")); 
+            }
+            else
+            {
+                attackStatus.Add("Shot missed");
+            }
+            
+            var moveLog = new MultiplayerMoveLog
             {
                 AttackerId = playerId,
                 Row = row,
@@ -332,7 +367,8 @@ public class GameService
                     AttackIndex = multiplayerGameState.History.Count,
                     PlayerAttackSucceeded = true,
                     Winner = multiplayerGameState.Winner == PlayerRole.Player1 ? multiplayerGameState.Player1Id : multiplayerGameState.Player2Id,
-                    MultiplayerMoveLog = moveLog
+                    MultiplayerMoveLog = moveLog,
+                    AttackStatus = attackStatus
                 };
             }
 
@@ -347,7 +383,8 @@ public class GameService
                 AttackIndex = multiplayerGameState.History.Count,
                 PlayerAttackSucceeded = playerHit,
                 Winner = null,
-                MultiplayerMoveLog = moveLog
+                MultiplayerMoveLog = moveLog,
+                AttackStatus = attackStatus
             };
         }
         else
@@ -355,7 +392,6 @@ public class GameService
             return null;
         }
     }
-
     
     private (int Row, int Col) GetNextAiMove(SinglePlayerGameState game)
     {
@@ -448,4 +484,54 @@ public class GameService
         
         return game;
     }
+
+    private List<string> GetAttackStatus(char cellSymbol, BattleGrid battleGrid, string player)
+    {
+        var attackStatus = new List<string>();
+
+        // Count occurrences of this ship's symbol in the grid
+        int count = battleGrid.Cells
+            .SelectMany(row => row)
+            .Count(c => c == cellSymbol);
+
+        if (count == 0)
+        {
+            attackStatus.Add($"{player} have destroyed the {GetShipName(cellSymbol)}");
+        }
+        else if (count < GetShipSize(cellSymbol))
+        {
+            attackStatus.Add($"{player} have partially destroyed the {GetShipName(cellSymbol)} ({GetShipSize(cellSymbol) - count}/{GetShipSize(cellSymbol)})");
+        }
+
+        return attackStatus;
+    }
+    
+    private string GetShipName(char cellSymbol)
+    {
+        return cellSymbol switch
+        {
+            'A' => "Cruiser",
+            'B' => "Destroyer",
+            'C' => "Submarine",
+            'D' => "Battleship",
+            'E' => "Carrier",
+            'F' => "Dreadnought",
+            _ => "Unknown Ship"
+        };
+    }
+    
+    private int GetShipSize(char cellSymbol)
+    {
+        return cellSymbol switch
+        {
+            'A' => 1,
+            'B' => 2,
+            'C' => 2,
+            'D' => 3,
+            'E' => 3,
+            'F' => 4,
+            _ => 0
+        };
+    }
+
 }

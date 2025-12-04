@@ -39,6 +39,25 @@
     
 }
 
+<div class="mb-3">
+    <div class="card">
+        <div class="card-header">
+            Attack Status
+        </div>
+        <div class="card-body">
+            @if (State.AttackStatus != null && State.AttackStatus.Any())
+            {
+                <ul class="list-group list-group-flush">
+                    @foreach (var status in State.AttackStatus)
+                    {
+                        <li class="list-group-item">@status</li>
+                    }
+                </ul>
+            }
+        </div>
+    </div>
+</div>
+
 <div class="row justify-content-center">
 
     <div class="col-6">

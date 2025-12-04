@@ -6,4 +6,6 @@ public class AttackResponse
     public bool PlayerAttackSucceeded { get; set; }
     public List<AiAttackResult> AiAttackResults { get; set; } = new();
     public string? Winner { get; set; }
+    
+    public List<string>? AttackStatus { get; set; }
 }
