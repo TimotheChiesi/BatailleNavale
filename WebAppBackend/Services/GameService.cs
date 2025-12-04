@@ -12,7 +12,7 @@ public class GameService
         _gridService = gridService;
     }
 
-    public SinglePlayerGameState StartNewSinglePlayerGame(AiDifficulty difficulty)
+    public SinglePlayerGameState StartNewSinglePlayerGame()
     {
         var playerGrid = _gridService.GenerateGrid();
         var aiGrid = _gridService.GenerateGrid();
@@ -169,25 +169,25 @@ public class GameService
         return new Queue<(int, int)>(moves.OrderBy(_ => Random.Shared.Next()));
     }
     
-    public AttackResponse Attack(SinglePlayerGameState singlePlayerGame, int row, int col)
+    public AttackResponse Attack(SinglePlayerGameState game, int row, int col)
     {
         // If game is already over, simply return winner info
-        if (singlePlayerGame.Winner != null)
+        if (game.Winner != null)
         {
             return new AttackResponse
             {
-                AttackIndex = singlePlayerGame.History.Count,
+                AttackIndex = game.History.Count,
                 PlayerAttackSucceeded = false,
                 AiAttackResults = new(),
-                Winner = singlePlayerGame.Winner
+                Winner = game.Winner
             };
         }
         
         // Player's turn
-        char cell = singlePlayerGame.AiGrid.Cells[row][col];
+        char cell = game.AiGrid.Cells[row][col];
         bool playerHit = cell is >= 'A' and <= 'F';
 
-        singlePlayerGame.AiGrid.Cells[row][col] = playerHit ? 'X' : 'O';
+        game.AiGrid.Cells[row][col] = playerHit ? 'X' : 'O';
         
         var moveLog = new MoveLog
         {
@@ -197,14 +197,14 @@ public class GameService
         };
 
         // Check if player has won
-        if (!GridHasShips(singlePlayerGame.AiGrid.Cells))
+        if (!GridHasShips(game.AiGrid.Cells))
         {
-            singlePlayerGame.History.Insert(singlePlayerGame.History.Count, moveLog);
+            game.History.Insert(game.History.Count, moveLog);
             
-            singlePlayerGame.Winner = "Player";
+            game.Winner = "Player";
             return new AttackResponse
             {
-                AttackIndex = singlePlayerGame.History.Count,
+                AttackIndex = game.History.Count,
                 PlayerAttackSucceeded = true,
                 AiAttackResults = new(),
                 Winner = "Player"
@@ -221,10 +221,10 @@ public class GameService
             {
                 var (aiRow, aiCol) = GetNextAiMove(game);
 
-                char aiCell = singlePlayerGame.PlayerGrid.Cells[aiRow][aiCol];
+                char aiCell = game.PlayerGrid.Cells[aiRow][aiCol];
                 aiHit = IsShip(aiCell);
 
-                singlePlayerGame.PlayerGrid.Cells[aiRow][aiCol] = aiHit ? 'X' : 'O';
+                game.PlayerGrid.Cells[aiRow][aiCol] = aiHit ? 'X' : 'O';
 
                 AiAttackResult aiAttackResult = new AiAttackResult
                 {
@@ -240,15 +240,15 @@ public class GameService
                 }
 
                 // Check if AI has won after each shot
-                if (!GridHasShips(singlePlayerGame.PlayerGrid.Cells))
+                if (!GridHasShips(game.PlayerGrid.Cells))
                 {
-                    singlePlayerGame.Winner = "AI";
+                    game.Winner = "AI";
                     // The last AI attack is the one that matters for the history log
                     moveLog.AiAttacks = aiAttackResults;
                     game.History.Insert(game.History.Count, moveLog);
                     return new AttackResponse
                     {
-                        AttackIndex = singlePlayerGame.History.Count,
+                        AttackIndex = game.History.Count,
                         PlayerAttackSucceeded = playerHit,
                         AiAttackResults = aiAttackResults,
                         Winner = "AI"
@@ -259,9 +259,10 @@ public class GameService
             // The last AI attack is the one that matters for the history log
             moveLog.AiAttacks = aiAttackResults;
             game.History.Insert(game.History.Count, moveLog);
+
             return new AttackResponse
             {
-                AttackIndex = singlePlayerGame.History.Count,
+                AttackIndex = game.History.Count,
                 PlayerAttackSucceeded = playerHit,
                 AiAttackResults = aiAttackResults,
                 Winner = null
@@ -270,10 +271,10 @@ public class GameService
         else
         {
             // Player hit, so it's their turn again. AI does not play.
-            singlePlayerGame.History.Insert(game.History.Count, moveLog);
+            game.History.Insert(game.History.Count, moveLog);
             return new AttackResponse
             {
-                AttackIndex = singlePlayerGame.History.Count,
+                AttackIndex = game.History.Count,
                 PlayerAttackSucceeded = playerHit,
                 AiAttackResults = new(),
                 Winner = null
@@ -346,7 +347,7 @@ public class GameService
     }
 
     
-    private (int Row, int Col) GetNextAiMove(GameState game)
+    private (int Row, int Col) GetNextAiMove(SinglePlayerGameState game)
     {
         if (game.AiDifficulty == AiDifficulty.TargetingRandom)
         {
@@ -374,7 +375,7 @@ public class GameService
         return move;
     }
 
-    private void AddNeighborsToTargetStack(GameState game, int row, int col)
+    private void AddNeighborsToTargetStack(SinglePlayerGameState game, int row, int col)
     {
         // Potential neighbors (Up, Down, Left, Right)
         var neighbors = new[]
