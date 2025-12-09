@@ -24,6 +24,7 @@ builder.Services.AddSingleton<GameService>();
 builder.Services.AddSingleton<IValidator<AttackRequest>, AttackRequestValidator>();
 builder.Services.AddSingleton<IValidator<MultiplayerAttackRequest>, MultiplayerAttackRequestValidator>();
 builder.Services.AddSingleton<IValidator<FinalizePlacementRequest>, FinalizePlacementRequestValidator>();
+builder.Services.AddSingleton<IValidator<RollbackRequest>, RollbackRequestValidator>();
 builder.Services.AddGrpc();
 builder.Services.AddSignalR();
 
@@ -63,8 +64,12 @@ app.MapPost("/api/attack",
         return Results.Ok(result);
     });
 
-app.MapPost("/api/rollback", (RollbackRequest req, GameService gameService) =>
+app.MapPost("/api/rollback", (RollbackRequest req, GameService gameService, IValidator<RollbackRequest> validator) =>
 {
+    var validationResult = validator.Validate(req);
+    if (!validationResult.IsValid)
+        return Results.BadRequest(validationResult.Errors);
+
     var updatedGameState = gameService.RollbackGame(req.GameId, req.Index);
 
     if (updatedGameState == null)
