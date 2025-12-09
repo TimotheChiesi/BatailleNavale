@@ -23,6 +23,7 @@ builder.Services.AddSingleton<GridService>();
 builder.Services.AddSingleton<GameService>();
 builder.Services.AddSingleton<IValidator<AttackRequest>, AttackRequestValidator>();
 builder.Services.AddSingleton<IValidator<MultiplayerAttackRequest>, MultiplayerAttackRequestValidator>();
+builder.Services.AddSingleton<IValidator<FinalizePlacementRequest>, FinalizePlacementRequestValidator>();
 builder.Services.AddGrpc();
 builder.Services.AddSignalR();
 
@@ -74,8 +75,12 @@ app.MapPost("/api/rollback", (RollbackRequest req, GameService gameService) =>
     return Results.Ok(updatedGameState);
 });
 
-app.MapPost("/api/finalize", (FinalizePlacementRequest req, GameService gameService) =>
+app.MapPost("/api/finalize", (FinalizePlacementRequest req, GameService gameService, IValidator<FinalizePlacementRequest> validator) =>
 {
+    var validationResult = validator.Validate(req);
+    if (!validationResult.IsValid)
+        return Results.BadRequest(validationResult.Errors);
+
     var updatedGameState = gameService.FinalizeGameSetup(req.GameId, req.Ships, req.Difficulty, req.GridSize);
 
     if (updatedGameState == null)
