@@ -25,6 +25,7 @@ builder.Services.AddSingleton<IValidator<AttackRequest>, AttackRequestValidator>
 builder.Services.AddSingleton<IValidator<MultiplayerAttackRequest>, MultiplayerAttackRequestValidator>();
 builder.Services.AddSingleton<IValidator<FinalizePlacementRequest>, FinalizePlacementRequestValidator>();
 builder.Services.AddSingleton<IValidator<RollbackRequest>, RollbackRequestValidator>();
+builder.Services.AddSingleton<IValidator<MultiplayerStartRequest>, MultiplayerStartRequestValidator>();
 builder.Services.AddGrpc();
 builder.Services.AddSignalR();
 
@@ -107,17 +108,16 @@ app.MapPost("/api/finalize", (FinalizePlacementRequest req, GameService gameServ
     });
 });
 
-app.MapPost("/api/multiplayer/start", (GameService gameService, MultiplayerStartRequest request) =>
+app.MapPost("/api/multiplayer/start", (GameService gameService, MultiplayerStartRequest request, IValidator<MultiplayerStartRequest> validator) =>
 {
+    var validationResult = validator.Validate(request);
+    if (!validationResult.IsValid)
+        return Results.BadRequest(validationResult.Errors);
+
     // A. FETCH ONLY (Do not StartNewGame here)
     // The game was already created by the SignalR Hub when the 2nd player joined.
-    var baseGame = gameService.GetMultiplayerGame(request.RoomId);
-
-    if (baseGame is not MultiplayerGameState game) 
-    {
-        return Results.NotFound("Game not found. Did the lobby start it correctly?");
-    }
-
+    var game = (gameService.GetMultiplayerGame(request.RoomId) as MultiplayerGameState)!;
+    
     // B. Security Check & Response
     if (request.PlayerId == game.Player1Id)
     {
