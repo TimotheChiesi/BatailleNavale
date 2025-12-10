@@ -72,22 +72,55 @@ public class BattleHub : Hub
         await Groups.AddToGroupAsync(connectionId, roomId);
 
         await Clients.Caller.SendAsync("JoinedRoom", roomId, room.Player1.PlayerId == player.PlayerId ? 1 : 2, room.Player1.PlayerId == player.PlayerId ? room.Player1.Pseudo : room.Player2!.Pseudo, roomGridSize, isPlayer1);
-        // if (room.Player2Connection != null)
-        // {
-        //     await Clients.Group(roomId).SendAsync("JoinedRoom", roomId, 2, room.Player2!.PlayerId);
-        // }
-
-        // Start game if both players joined
+        
         if (isGameStarting)
         {
-            // Notify everyone that game is ready
+            // Notify everyone that game is ready for PLACEMENT
             await Clients.Group(roomId).SendAsync("GameReady", roomId, room.Player1!.Pseudo, room.Player2!.Pseudo);
 
-            // Create game in memory
-            _gameService.StartNewMultiplayerGame(roomId, room.Player1.PlayerId, room.Player2.PlayerId, room.GridSize!.Value);
+            // Tell clients to go to the Placement page, not the Game page
+            await Clients.Group(roomId).SendAsync("GoToPlacement", roomId, room.GridSize);
+        }
+    }
+    
+    public async Task SubmitShips(string roomId, string playerId, List<Ship> ships)
+    {
+        GameRoom? room;
+        lock (_lock)
+        {
+            if (!Rooms.TryGetValue(roomId, out room)) return;
 
-            // Notify both players to navigate/start game
-            await Clients.Group(roomId).SendAsync("StartGame", roomId);
+            if (room.Player1?.PlayerId == playerId)
+            {
+                Console.WriteLine("Player1 submitted ships");
+                room.Player1Ships = ships;
+            }
+            else if (room.Player2?.PlayerId == playerId)
+            {
+                Console.WriteLine("Player2 submitted ships");
+                room.Player2Ships = ships;
+            }
+        }
+
+        // Check if both have submitted
+        if (room.Player1Ships != null && room.Player2Ships != null)
+        {
+            Console.WriteLine("Starting game");
+            _gameService.StartNewMultiplayerGame(
+                roomId, 
+                room.Player1!.PlayerId, 
+                room.Player2!.PlayerId, 
+                room.GridSize!.Value,
+                room.Player1Ships,
+                room.Player2Ships
+            );
+
+            await Clients.Group(roomId).SendAsync("StartBattle", roomId);
+        }
+        else
+        {
+            Console.WriteLine("Waiting for opponent");
+            await Clients.Caller.SendAsync("WaitingForOpponent");
         }
     }
     
@@ -147,6 +180,28 @@ public class BattleHub : Hub
         }
 
         await base.OnDisconnectedAsync(exception);
+    }
+    
+    public async Task Rejoin(string roomId, string playerId)
+    {
+        // 1. Re-associate the connection ID in the memory (important for private messages like Attack)
+        lock (_lock)
+        {
+            if (Rooms.TryGetValue(roomId, out var room))
+            {
+                if (room.Player1?.PlayerId == playerId)
+                {
+                    room.Player1Connection = Context.ConnectionId;
+                }
+                else if (room.Player2?.PlayerId == playerId)
+                {
+                    room.Player2Connection = Context.ConnectionId;
+                }
+            }
+        }
+
+        // 2. Add this NEW connection to the SignalR Group so they receive group messages
+        await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
     }
 
 }

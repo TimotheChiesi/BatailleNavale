@@ -1,7 +1,7 @@
 @page "/multiplayer"
 @using Microsoft.AspNetCore.SignalR.Client
 @inject NavigationManager Navigation
-@inject IJSRuntime JS
+@inject IJSRuntime JsRuntime
 
 <div class="d-flex justify-content-center mt-5">
     <div class="card shadow-lg p-4" style="width: 28rem; border-radius: 1rem;">
@@ -20,7 +20,7 @@
 
         <div class="mb-3">
             <label class="form-label fw-bold">Pseudo</label>
-            <input class="form-control" placeholder="Your nickname" @bind="CurrentPlayer.Pseudo" />
+            <input class="form-control" placeholder="Your nickname" @bind="_currentPlayer.Pseudo" />
         </div>
         
         <div class="mb-3">
@@ -62,28 +62,28 @@
 </div>
 
 @code {
-    private HubConnection? hubConnection;
-    public string RoomId { get; set; } = "";
-    public string Status { get; set; } = "Not connected";
-    public string Player1Info { get; set; } = "";
-    public string Player2Info { get; set; } = "";
+    private HubConnection? _hubConnection;
+    private string RoomId { get; set; } = "";
+    private string Status { get; set; } = "Not connected";
+    private string Player1Info { get; set; } = "";
+    private string Player2Info { get; set; } = "";
     
-    public int GridSize { get; set; } = 10;
-    public int? RoomGridSize { get; set; }
+    private int GridSize { get; set; } = 10;
+    private int? RoomGridSize { get; set; }
     private bool IsPlayer1 { get; set; }
 
-    private Player CurrentPlayer = new();
+    private readonly Player _currentPlayer = new();
 
     protected override async Task OnInitializedAsync()
     {
         GenerateNewRoomId();
 
-        hubConnection = new HubConnectionBuilder()
+        _hubConnection = new HubConnectionBuilder()
             .WithUrl("http://localhost:5120/battleHub")
             .WithAutomaticReconnect()
             .Build();
 
-        hubConnection.On<string, int, string, int?, bool>("JoinedRoom", (room, playerNumber, pseudo, roomGridSize, isPlayer1) =>
+        _hubConnection.On<string, int, string, int?, bool>("JoinedRoom", (room, playerNumber, pseudo, roomGridSize, isPlayer1) =>
         {
             Status = $"Joined {room} as Player {playerNumber} ({pseudo})";
             
@@ -100,28 +100,28 @@
             StateHasChanged();
         });
         
-        hubConnection.On<string, string, string>("GameReady", (room, player1Name, player2Name) =>
+        _hubConnection.On<string, string, string>("GameReady", (room, player1Name, player2Name) =>
         {
             Status = $"Game ready in room {room}!";
             Player1Info = $"Player 1: {player1Name}";
             Player2Info = $"Player 2: {player2Name}";
             StateHasChanged();
         });
-
-        hubConnection.On<string>("StartGame", (room) =>
+        
+        _hubConnection.On<string, int>("GoToPlacement", (room, size) =>
         {
-            Navigation.NavigateTo($"/multiplayerGame/{room}/{CurrentPlayer.PlayerId}");
+            Navigation.NavigateTo($"/multiplayerPlacement/{room}/{_currentPlayer.PlayerId}/{size}");
         });
 
-        await hubConnection.StartAsync();
+        await _hubConnection.StartAsync();
     }
 
     private async Task JoinGame()
     {
-        if (hubConnection != null)
+        if (_hubConnection != null)
         {
-            CurrentPlayer.PlayerId = Guid.NewGuid().ToString();
-            await hubConnection.InvokeAsync("JoinRoom", RoomId, CurrentPlayer, GridSize); 
+            _currentPlayer.PlayerId = Guid.NewGuid().ToString();
+            await _hubConnection.InvokeAsync("JoinRoom", RoomId, _currentPlayer, GridSize); 
         }
     }
 
@@ -132,7 +132,7 @@
     
     private async Task CopyRoomId()
     {
-        await JS.InvokeVoidAsync("navigator.clipboard.writeText", RoomId);
+        await JsRuntime.InvokeVoidAsync("navigator.clipboard.writeText", RoomId);
         Status = "Room ID copied!";
     }
 }

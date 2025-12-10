@@ -13,5 +13,8 @@ public class GameRoom
     public string? Player2Connection { get; set; }
     
     public int? GridSize { get; set; }
+    
+    public List<Ship>? Player1Ships { get; set; }
+    public List<Ship>? Player2Ships { get; set; }
 }
 

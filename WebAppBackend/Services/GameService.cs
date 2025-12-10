@@ -33,9 +33,8 @@ public class GameService
         return game;
     }
     
-    public void StartNewMultiplayerGame(string roomIdString, string player1Id, string player2Id, int gridSize)
+    public void StartNewMultiplayerGame(string roomIdString, string player1Id, string player2Id, int gridSize, List<Ship> player1Ships, List<Ship> player2Ships)
     {
-        // 1. Convert the Room String to a GUID
         if (!Guid.TryParse(roomIdString, out Guid gameId))
         {
             throw new ArgumentException("Invalid Room ID format");
@@ -44,10 +43,13 @@ public class GameService
         var game = new MultiplayerGameState
         {
             GameId = gameId, // The Room GUID becomes the Game GUID
+            
             Player1Id = player1Id,
-            Player1Grid = _gridService.GenerateGrid(gridSize),
+            Player1Grid = _gridService.CreateGridFromShips(gridSize, player1Ships),
+            
             Player2Id = player2Id,
-            Player2Grid = _gridService.GenerateGrid(gridSize),
+            Player2Grid = _gridService.CreateGridFromShips(gridSize, player2Ships),
+            
             History = new List<MultiplayerMoveLog>(),
             GridSize = gridSize
         };
@@ -482,6 +484,39 @@ public class GameService
         
         // Update the original grid copy for rollback purposes
         game.OriginalPlayerGrid = DeepCopyGrid(game.PlayerGrid);
+        
+        return game;
+    }
+    
+    public MultiplayerGameState? FinalizeGameSetupMultiplayer(Guid id, List<Ship> playerShips, int gridSize)
+    {
+        if (!_games.TryGetValue(id, out var baseGame))
+            return null;
+
+        if (baseGame is not MultiplayerGameState game)
+        {
+            throw new Exception("FinalizeGameSetupMultiplayer is not allowed in SinglePlayer games.");
+        }
+        
+        // Clear the original player grid cells
+        game.Player1Grid.Cells = Enumerable.Range(0, gridSize).Select(_ => new char[gridSize]).ToArray();
+        game.Player1Grid.Ships = playerShips;
+        game.GridSize = gridSize;
+        
+        // Re-populate the cells based on the user-placed ships
+        foreach (var ship in playerShips)
+        {
+            if (ship.IsHorizontal)
+            {
+                for (int i = 0; i < ship.Size; i++)
+                    game.Player1Grid.Cells[ship.StartRow][ship.StartCol + i] = ship.Symbol;
+            }
+            else
+            {
+                for (int i = 0; i < ship.Size; i++)
+                    game.Player1Grid.Cells[ship.StartRow + i][ship.StartCol] = ship.Symbol;
+            }
+        }
         
         return game;
     }

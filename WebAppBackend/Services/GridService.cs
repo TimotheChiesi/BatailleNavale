@@ -78,6 +78,40 @@ public class GridService
             }
         }
     }
+    
+    public BattleGrid CreateGridFromShips(int gridSize, List<Ship> ships)
+    {
+        // 1. Create a clean grid
+        var grid = new BattleGrid(gridSize);
+    
+        // 2. Assign the ships directly
+        grid.Ships = ships;
+
+        // 3. Populate the 'Cells' array based on the ship coordinates
+        foreach (var ship in ships)
+        {
+            for (int i = 0; i < ship.Size; i++)
+            {
+                if (ship.IsHorizontal)
+                {
+                    // Ensure we don't go out of bounds (safety check)
+                    if (ship.StartCol + i < gridSize)
+                    {
+                        grid.Cells[ship.StartRow][ship.StartCol + i] = ship.Symbol;
+                    }
+                }
+                else
+                {
+                    if (ship.StartRow + i < gridSize)
+                    {
+                        grid.Cells[ship.StartRow + i][ship.StartCol] = ship.Symbol;
+                    }
+                }
+            }
+        }
+
+        return grid;
+    }
 
     private bool CheckFreeHorizontal(char[][] grid, int row, int col, int size, int gridSize)
     {
